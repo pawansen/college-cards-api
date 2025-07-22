@@ -1,0 +1,3 @@
+id,name,email,mobile,address,profile_image,role_id,username,password,auth_password,is_active,last_login,country_id,state_id,city_id,state,city,age,created_by,updated_by,create_at,update_at,is_delete
+1,Admin,admin@vaow.in,9823652001,India,/uploads/users/users-1712302632104.jpg,1,admin,$2b$10$u4Nz9p8/loQ985.SdbPLROokfa/f1gdNKrjuzIZPe9XIdwVjhS5sG,$2b$10$u4Nz9p8/loQ985.SdbPLRO,1,05-04-2024 13:07,101,4026,57848,Karnataka,Bangalore Urban,0,0,0,05-04-2024 13:07,05-04-2024 13:07,1
+2,Demo,demo@vaow.in,9823652009,India,/uploads/users/users-1712302646549.jpg,1,demo,$2b$10$Us7GyLKQe5CE3MDFyxEV9.XkNInhAc0XPlNzk49eePy.yE5LLoWFW,$2b$10$Us7GyLKQe5CE3MDFyxEV9.,1,05-04-2024 13:07,101,4026,57848,Karnataka,Bangalore Urban,0,0,0,05-04-2024 13:07,05-04-2024 13:07,1

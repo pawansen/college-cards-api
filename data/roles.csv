@@ -1,0 +1,9 @@
+id,role_name,description,create_at,update_at,can_edit
+1,administrator,Admin,"2024-02-20 06:56:40","2024-02-20 06:56:40",0
+2,vaow-user,vaow user,"2024-02-20 06:56:40","2024-02-20 06:56:40",0
+3,oem-admin,oem admin,"2024-02-20 06:56:40","2024-02-20 06:56:40",0
+4,oem-user,oem user,"2024-02-20 06:56:40","2024-02-20 06:56:40",0
+5,dealer-admin,dealer admin,"2024-02-20 06:56:40","2024-02-20 06:56:40",0
+6,dealer-user,dealer user,"2024-02-20 06:56:40","2024-02-20 06:56:40",0
+7,client,client driver,"2024-02-20 06:56:40","2024-02-20 06:56:40",0
+8,insurance,insurance,"2024-02-20 06:56:40","2024-02-20 06:56:40",0

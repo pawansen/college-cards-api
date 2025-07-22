@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "@cms/*": ["./src/api/*"],
+      "@cms-infrastructure/*": ["./src/infrastructure/*"]
+    }
+  },
+  "include": ["./src", "index.js", "config"]
+}
