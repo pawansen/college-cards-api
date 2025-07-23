@@ -1,6 +1,6 @@
 const Joi = require('joi')
 const addRole = require('./addRole.validator'),
-  getRoleInfo = require('./getRoleInfo.validator'),
+  getRoleInfo = require('./cities.validator'),
   updateRole = require('./updateRole.validator'),
   addUser = require('./addUser.validator'),
   getUsers = require('./getUsers.validator'),
@@ -171,7 +171,6 @@ const addVehicleModelController = Joi.object({
   model_name: Joi.string().required(),
   Authorization: Joi.string().allow('').optional(),
 })
-
 
 module.exports = {
   addRole,

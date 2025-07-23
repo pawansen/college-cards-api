@@ -12,7 +12,8 @@ const bcrypt = require('bcrypt'),
     }),
     getCurrentLine = require('get-current-line'),
     userSchema = require('../domain/schema/mongoose/user.schema'),
-    roleSchema = require('../domain/schema/mongoose/role.schema'),
+    stateSchema = require('../domain/schema/mongoose/state.schema'),
+    citiesSchema = require('../domain/schema/mongoose/cities.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -96,5 +97,55 @@ exports.registerServices = async (req) => {
         }
     } catch (err) {
         return err
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.stateServices = async (req, res) => {
+    try {
+        // Fetch all states from the database
+        const country_id = 101;
+        const data = await stateSchema.find({ country_id: country_id });
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.citiesServices = async (req, res) => {
+    try {
+        const { state_id } = req.query;
+        // Fetch all cities from the database
+        const data = await citiesSchema.find({ state_id: state_id });
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
     }
 }

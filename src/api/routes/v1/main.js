@@ -2,7 +2,7 @@ const Validator = require('../../middlewares/validator'),
     { verifyToken } = require('../../middlewares/verifyToken'),
     Upload = require('../../middlewares/upload'),
     {
-        loginController, registerController,
+        loginController, registerController, stateController, citiesController
     } = require('../../controllers/v1/app/main/mainController')
 
 class MainRoutes {
@@ -20,6 +20,21 @@ class MainRoutes {
             '/v1/register',
             Validator('addUser'),
             registerController
+        )
+
+        /** add user */
+        this.app.get(
+            '/v1/states',
+            verifyToken,
+            stateController
+        )
+
+        /** add user */
+        this.app.get(
+            '/v1/cities',
+            verifyToken,
+            Validator('getCities'),
+            citiesController
         )
     }
     routesConfig() {
