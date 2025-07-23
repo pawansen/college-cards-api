@@ -18,6 +18,7 @@ class MainRoutes {
         /** add user */
         this.app.post(
             '/v1/register',
+            Upload('users').single('profileImage'),
             Validator('addUser'),
             registerController
         )
@@ -33,7 +34,7 @@ class MainRoutes {
         this.app.get(
             '/v1/cities',
             verifyToken,
-            Validator('getCities'),
+            // Validator('getCities'),
             citiesController
         )
     }

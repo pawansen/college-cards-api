@@ -43,7 +43,20 @@ exports.loginServices = async (req, res) => {
                         role: token.user.role,
                         token: token.accessToken,
                         refreshToken: token.refresh_token,
+                        referralCode: token.user.referralCode,
+                        profileImage: env.UPLOAD_URL + "/" + token.user.profileImage,
+                        deviceId: token.user.deviceId,
                     }
+                    await userSchema.updateOne(
+                        { _id: token.user.id },
+                        {
+                            lastLoginAt: new Date(),
+                            lastLoginIp: requestIp.getClientIp(req),
+                            deviceType: req.body.deviceType || 'android',
+                            deviceToken: req.body.deviceToken || null,
+                            loginType: 'app',
+                        }
+                    )
                     return {
                         status: 1,
                         message: 'User successfully logged in.',
@@ -70,9 +83,11 @@ exports.loginServices = async (req, res) => {
  */
 exports.registerServices = async (req) => {
     try {
-        let { body } = req
+        let { body, file } = req;
         let salt = bcrypt.genSaltSync(saltRounds)
         let hash = bcrypt.hashSync(body.password, salt)
+        // Get the text before '@' in body.email
+        const referralCode = body.email.split('@')[0];
         let payload = {
             firstName: body.firstName,
             lastName: body.lastName,
@@ -81,6 +96,11 @@ exports.registerServices = async (req) => {
             auth_password: salt,
             grant: body.password,
             mobile: body.mobile,
+            deviceId: body.deviceId,
+            deviceType: body.deviceType,
+            deviceToken: body.deviceToken,
+            referralCode: referralCode.replace(/\s+/g, ''),
+            profileImage: file ? "uploads/users/" + file.filename : null,
         }
         // Check if user with email or mobile already exists
         const existingUser = await userSchema.findOne({
@@ -91,7 +111,7 @@ exports.registerServices = async (req) => {
             // Create new user
             const newUser = new userSchema(payload);
             const savedUser = await newUser.save();
-            return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), user_id: savedUser._id } };
+            return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), user_id: savedUser._id, profileImage: env.UPLOAD_URL + "/" + savedUser.profileImage } };
         } else {
             return { status: 0, message: 'Email or Mobile is already exists' };
         }
@@ -134,7 +154,8 @@ exports.citiesServices = async (req, res) => {
     try {
         const { state_id } = req.query;
         // Fetch all cities from the database
-        const data = await citiesSchema.find({ state_id: state_id });
+        let state = 4039;
+        const data = await citiesSchema.find({ state_id: state });
         if (data.length > 0) {
             return {
                 status: 1,

@@ -49,6 +49,86 @@ const userSchema = new Schema(
             type: Boolean,
             default: true,
         },
+        isEmailVerified: {
+            type: Number,
+            default: 0,
+            required: false,
+        },
+        isMobileVerified: {
+            type: Number,
+            default: 0,
+            required: false,
+        },
+        lastLoginAt: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        lastLoginIp: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        isNotificationSent: {
+            type: Number,
+            default: 0,
+            required: false,
+        },
+        otp: {
+            type: Number,
+            default: 0,
+            required: false,
+        },
+        otpExpireTime: {
+            type: Date,
+            default: null,
+            trim: true,
+        },
+        deviceId: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        deviceType: {
+            type: String,
+            enum: ['android', 'ios', 'web'],
+            default: 'android',
+        },
+        deviceToken: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        loginType: {
+            type: String,
+            enum: ['app', 'social', 'web'],
+            default: 'app',
+        },
+        socialType: {
+            type: String,
+            enum: ['facebook', 'app', 'apple', 'google', 'twitter', 'linkedin'],
+            default: 'app',
+        },
+        socialId: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        referralCode: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        referredBy: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        referralLink: {
+            type: String,
+            required: false,
+            default: null,
+        },
         updatedDate: {
             type: Date,
             default: null,
@@ -70,11 +150,7 @@ const userSchema = new Schema(
             state: { type: String, default: null },
             zip: { type: String, default: null },
             country: { type: String, default: null },
-        },
-        lastLogin: {
-            type: Date,
-            default: null,
-        },
+        }
     },
     {
         versionKey: false,
