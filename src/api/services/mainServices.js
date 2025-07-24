@@ -45,7 +45,7 @@ exports.loginServices = async (req, res) => {
                         token: token.accessToken,
                         refreshToken: token.refresh_token,
                         referralCode: token.user.referralCode,
-                        profileImage: env.UPLOAD_URL + "/" + token.user.profileImage,
+                        profileImage: env.UPLOAD_URL + "/uploads/users/" + token.user.profileImage,
                         deviceId: token.user.deviceId,
                     }
                     await userSchema.updateOne(
@@ -112,7 +112,7 @@ exports.registerServices = async (req) => {
             // Create new user
             const newUser = new userSchema(payload);
             const savedUser = await newUser.save();
-            return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), user_id: savedUser._id, profileImage: env.UPLOAD_URL + "/" + savedUser.profileImage } };
+            return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), user_id: savedUser._id, profileImage: env.UPLOAD_URL + "/uploads/users/" + savedUser.profileImage } };
         } else {
             return { status: 0, message: 'Email or Mobile is already exists' };
         }
@@ -214,7 +214,7 @@ exports.getProfileServices = async (req, res) => {
                 token: user.token,
                 refreshToken: user.refreshToken,
                 referralCode: user.referralCode,
-                profileImage: env.UPLOAD_URL + "/" + user.profileImage,
+                profileImage: env.UPLOAD_URL + "/uploads/users/" + user.profileImage,
                 deviceId: user.deviceId,
             }
             return {
@@ -279,7 +279,7 @@ exports.updateUserServices = async (req, res) => {
                 token: user.token,
                 refreshToken: user.refreshToken,
                 referralCode: user.referralCode,
-                profileImage: env.UPLOAD_URL + "/" + user.profileImage,
+                profileImage: env.UPLOAD_URL + "/uploads/users/" + user.profileImage,
                 deviceId: user.deviceId,
             };
             return {
