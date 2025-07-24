@@ -2,12 +2,14 @@ const {
     loginServices,
     registerServices,
     stateServices,
-    citiesServices
+    citiesServices,
+    getProfileServices,
+    updateUserServices,
+    updateCityServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
-        SuccessResponse,
-        SuccessCreated,
+        SuccessResponse
     } = require('../../../../utils/apiResponse');
 
 /**
@@ -75,6 +77,63 @@ exports.stateController = (req, res) => {
  */
 exports.citiesController = (req, res) => {
     citiesServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getProfileController = (req, res) => {
+    getProfileServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.updateUserController = (req, res) => {
+    updateUserServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.updateCityController = (req, res) => {
+    updateCityServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

@@ -14,6 +14,7 @@ const bcrypt = require('bcrypt'),
     userSchema = require('../domain/schema/mongoose/user.schema'),
     stateSchema = require('../domain/schema/mongoose/state.schema'),
     citiesSchema = require('../domain/schema/mongoose/cities.schema'),
+    userCitiesSchema = require('../domain/schema/mongoose/userCities.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -165,6 +166,153 @@ exports.citiesServices = async (req, res) => {
         } else {
             return { status: 0, message: 'Records not found' }
         }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getProfileServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const user = await userSchema.findOne(
+            { _id: _id, isActive: true },
+            {
+                _id: 1,
+                user_id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                mobile: 1,
+                role: 1,
+                token: 1,
+                refreshToken: 1,
+                referralCode: 1,
+                profileImage: 1,
+                deviceId: 1,
+                createDate: 1,
+                lastLoginAt: 1,
+                deviceToken: 1,
+                password: 1, deviceType: 1, loginType: 1, isActive: 1, isEmailVerified: 1, isMobileVerified: 1
+            }
+        ).lean();
+        if (user) {
+            const data = {
+                id: user._id,
+                user_id: user.user_id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                mobile: user.mobile,
+                role: user.role,
+                token: user.token,
+                refreshToken: user.refreshToken,
+                referralCode: user.referralCode,
+                profileImage: env.UPLOAD_URL + "/" + user.profileImage,
+                deviceId: user.deviceId,
+            }
+            return {
+                status: 1,
+                message: 'User successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'User not found or inactive.' }
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.updateUserServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        let { file } = req;
+        const { firstName, lastName, mobile, email, profileImage } = req.body;
+        // Check if email or mobile exists for another user
+        const exists = await userSchema.findOne({
+            $and: [
+                { _id: { $ne: _id } },
+                { $or: [{ email }, { mobile }] }
+            ]
+        });
+        if (exists) {
+            return { status: 0, message: 'Email or Mobile already exists for another user.' };
+        }
+
+        // Update user
+        const updatePayload = {
+            firstName,
+            lastName,
+            mobile,
+            email,
+        };
+        if (file) {
+            updatePayload.profileImage = file.filename;
+        }
+        await userSchema.updateOne({ _id }, updatePayload);
+
+        // Return updated user
+        const user = await userSchema.findOne({ _id, isActive: true }).lean();
+        if (user) {
+            const data = {
+                id: user._id,
+                user_id: user.user_id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                mobile: user.mobile,
+                role: user.role,
+                token: user.token,
+                refreshToken: user.refreshToken,
+                referralCode: user.referralCode,
+                profileImage: env.UPLOAD_URL + "/" + user.profileImage,
+                deviceId: user.deviceId,
+            };
+            return {
+                status: 1,
+                message: 'User profile updated successfully.',
+                data,
+            };
+        } else {
+            return { status: 0, message: 'User not found or inactive.' };
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.updateCityServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        let { city_id } = req.body;
+        // Insert or update userCities schema
+        await userCitiesSchema.updateOne(
+            { user_id: _id },
+            { city_id },
+            { upsert: true }
+        );
+        return { status: 1, message: 'User city updated successfully.' };
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }

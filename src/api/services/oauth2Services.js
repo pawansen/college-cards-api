@@ -59,10 +59,27 @@ module.exports.getRefreshToken = async function (bearerToken) {
  */
 
 module.exports.getUser = async function (email, password) {
-  const user = await userSchema.findOne({
-    email: email,
-    isActive: true
-  });
+  const user = await userSchema.findOne(
+    { email: email, isActive: true },
+    {
+      _id: 1,
+      user_id: 1,
+      firstName: 1,
+      lastName: 1,
+      email: 1,
+      mobile: 1,
+      role: 1,
+      token: 1,
+      refreshToken: 1,
+      referralCode: 1,
+      profileImage: 1,
+      deviceId: 1,
+      createDate: 1,
+      lastLoginAt: 1,
+      deviceToken: 1,
+      password: 1, deviceType: 1, loginType: 1, isActive: 1, isEmailVerified: 1, isMobileVerified: 1
+    }
+  ).lean();
   if (user) {
     const match = await bcrypt.compare(password, user.password);
     if (!match) {

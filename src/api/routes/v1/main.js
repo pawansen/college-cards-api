@@ -2,7 +2,8 @@ const Validator = require('../../middlewares/validator'),
     { verifyToken } = require('../../middlewares/verifyToken'),
     Upload = require('../../middlewares/upload'),
     {
-        loginController, registerController, stateController, citiesController
+        loginController, registerController, stateController, citiesController, getProfileController,
+        updateUserController, updateCityController
     } = require('../../controllers/v1/app/main/mainController')
 
 class MainRoutes {
@@ -15,7 +16,7 @@ class MainRoutes {
         /** login */
         this.app.post('/v1/login', Validator('login'), loginController)
 
-        /** add user */
+        /** apis */
         this.app.post(
             '/v1/register',
             Upload('users').single('profileImage'),
@@ -23,19 +24,43 @@ class MainRoutes {
             registerController
         )
 
-        /** add user */
+        /** apis */
         this.app.get(
             '/v1/states',
             verifyToken,
             stateController
         )
 
-        /** add user */
+        /** apis */
         this.app.get(
             '/v1/cities',
             verifyToken,
             // Validator('getCities'),
             citiesController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-profile',
+            verifyToken,
+            getProfileController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/update-city',
+            verifyToken,
+            Validator('updateCity'),
+            updateCityController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/update-profile',
+            verifyToken,
+            Upload('users').single('profileImage'),
+            Validator('updateUserProfile'),
+            updateUserController
         )
     }
     routesConfig() {
