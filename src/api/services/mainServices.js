@@ -12,9 +12,12 @@ const bcrypt = require('bcrypt'),
     }),
     getCurrentLine = require('get-current-line'),
     userSchema = require('../domain/schema/mongoose/user.schema'),
+    OAuthTokenSchema = require('../domain/schema/mongoose/oauthTokens.schema'),
     stateSchema = require('../domain/schema/mongoose/state.schema'),
     citiesSchema = require('../domain/schema/mongoose/cities.schema'),
     userCitiesSchema = require('../domain/schema/mongoose/userCities.schema'),
+    couponSchema = require('../domain/schema/mongoose/coupon.schema'),
+    FeedbackSchema = require('../domain/schema/mongoose/feedback.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -45,7 +48,7 @@ exports.loginServices = async (req, res) => {
                         token: token.accessToken,
                         refreshToken: token.refresh_token,
                         referralCode: token.user.referralCode,
-                        profileImage: env.UPLOAD_URL + "/uploads/users/" + token.user.profileImage,
+                        profileImage: env.UPLOAD_URL + token.user.profileImage,
                         deviceId: token.user.deviceId,
                     }
                     await userSchema.updateOne(
@@ -76,7 +79,6 @@ exports.loginServices = async (req, res) => {
     }
 }
 
-
 /**
  * add user.
  *
@@ -101,7 +103,7 @@ exports.registerServices = async (req) => {
             deviceType: body.deviceType,
             deviceToken: body.deviceToken,
             referralCode: referralCode.replace(/\s+/g, ''),
-            profileImage: file ? "uploads/users/" + file.filename : null,
+            profileImage: file ? "/uploads/users/" + file.filename : null,
         }
         // Check if user with email or mobile already exists
         const existingUser = await userSchema.findOne({
@@ -112,7 +114,7 @@ exports.registerServices = async (req) => {
             // Create new user
             const newUser = new userSchema(payload);
             const savedUser = await newUser.save();
-            return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), user_id: savedUser._id, profileImage: env.UPLOAD_URL + "/uploads/users/" + savedUser.profileImage } };
+            return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), user_id: savedUser._id, profileImage: env.UPLOAD_URL + savedUser.profileImage } };
         } else {
             return { status: 0, message: 'Email or Mobile is already exists' };
         }
@@ -214,7 +216,7 @@ exports.getProfileServices = async (req, res) => {
                 token: user.token,
                 refreshToken: user.refreshToken,
                 referralCode: user.referralCode,
-                profileImage: env.UPLOAD_URL + "/uploads/users/" + user.profileImage,
+                profileImage: env.UPLOAD_URL + user.profileImage,
                 deviceId: user.deviceId,
             }
             return {
@@ -261,7 +263,7 @@ exports.updateUserServices = async (req, res) => {
             email,
         };
         if (file) {
-            updatePayload.profileImage = file.filename;
+            updatePayload.profileImage = "/uploads/users/" + file.filename;
         }
         await userSchema.updateOne({ _id }, updatePayload);
 
@@ -279,7 +281,7 @@ exports.updateUserServices = async (req, res) => {
                 token: user.token,
                 refreshToken: user.refreshToken,
                 referralCode: user.referralCode,
-                profileImage: env.UPLOAD_URL + "/uploads/users/" + user.profileImage,
+                profileImage: env.UPLOAD_URL + user.profileImage,
                 deviceId: user.deviceId,
             };
             return {
@@ -316,5 +318,172 @@ exports.updateCityServices = async (req, res) => {
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addCouponServices = async (req) => {
+    try {
+        let { body, file } = req;
+        const address = body.address ? JSON.parse(body.address) : [];
+        let payload = {
+            title: body.title,
+            code: body.code,
+            amount: body.amount,
+            amountType: body.amountType,
+            description: body.description,
+            city_id: body.city_id,
+            address: Array.isArray(address) && address.length > 0
+                ? address.map(item => ({
+                    address: item.address || ''
+                }))
+                : [],
+            logo: file ? "/uploads/coupons/" + file.filename : null,
+        }
+        // Check if user with email or mobile already exists
+        const existingUser = await couponSchema.findOne({
+            $and: [{ code: body.code }, { city_id: body.city_id }]
+        });
+
+        if (!existingUser) {
+            // Create new user
+            const newUser = new couponSchema(payload);
+            const savedUser = await newUser.save();
+            return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), id: savedUser._id, logo: env.UPLOAD_URL + savedUser.logo } };
+        } else {
+            return { status: 0, message: 'Coupon code already exists' };
+        }
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getCouponServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const { city_id, limit, pageNo } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+        // Fetch all cities from the database
+        const userCities = await userCitiesSchema.find({ user_id: _id });
+        // If userCities found, extract city_id into a new array
+        let userCityIds = [];
+        if (userCities && userCities.length > 0) {
+            userCityIds = userCities.map(item => item.city_id);
+        }
+        // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
+        let query = {};
+        if (userCityIds && userCityIds.length > 0) {
+            query.city_id = { $in: userCityIds };
+        } else if (city_id) {
+            query.city_id = city_id;
+        }
+        let data = [];
+        if (city_id) {
+            data = await couponSchema.find({ city_id: city_id }).skip(offset).limit(limits);
+        } else {
+            data = await couponSchema.find(query).skip(offset).limit(limits);
+        }
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.changePasswordServices = async (req) => {
+    try {
+        const { _id } = req.User;
+        let { old_password, new_password } = req.body
+        // Check if user with email or mobile already exists
+        const User = await userSchema.findOne({
+            $and: [{ _id: _id }]
+        });
+        if (!User) {
+            return { status: 0, message: 'User not found' };
+        }
+        if (!bcrypt.compareSync(old_password, User.password)) {
+            return { status: 0, message: 'Old password is incorrect' };
+        } else {
+            let salt = bcrypt.genSaltSync(saltRounds)
+            let hash = bcrypt.hashSync(new_password, salt)
+            let payload = {
+                password: hash,
+                auth_password: salt,
+                grant: new_password,
+            }
+            const updateResult = await userSchema.updateOne(
+                { _id: _id },
+                { $set: payload }
+            );
+            if (updateResult.modifiedCount > 0) {
+                // Delete all OAuth tokens for the current user after password change
+                await OAuthTokenSchema.deleteMany({ user_id: _id });
+                return { status: 1, message: 'Password changed successfully.' };
+            } else {
+                return { status: 0, message: 'Password not changed.' };
+            }
+        }
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.logoutServices = async (req) => {
+    try {
+        const { _id } = req.User;
+        // Invalidate all OAuth tokens for the current user
+        await OAuthTokenSchema.deleteMany({ user_id: _id });
+        return { status: 1, message: 'Logged out successfully.' };
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.feedbackServices = async (req) => {
+    try {
+        const { _id } = req.User;
+        let { description } = req.body
+        // Save feedback to the database
+        const feedbackEntry = new FeedbackSchema({
+            user_id: _id,
+            description: description
+        });
+        await feedbackEntry.save();
+        return { status: 1, message: 'Feedback submitted successfully.' };
+    } catch (err) {
+        return err
     }
 }

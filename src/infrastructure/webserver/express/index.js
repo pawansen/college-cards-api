@@ -62,7 +62,7 @@ exports.createServer = () => {
   /** listen server */
   mongoose.connect()().then(() => {
     app.listen(port, () => {
-      log.info(`College Cards Running on http://${ host }:${ port }`)
+      log.info(`Server Running on http://${ host }:${ port }`)
     })
   });
 

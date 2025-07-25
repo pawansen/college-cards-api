@@ -49,6 +49,10 @@ const userSchema = new Schema(
             type: Boolean,
             default: true,
         },
+        isDelete: {
+            type: Boolean,
+            default: false,
+        },
         isEmailVerified: {
             type: Number,
             default: 0,

@@ -3,7 +3,8 @@ const Validator = require('../../middlewares/validator'),
     Upload = require('../../middlewares/upload'),
     {
         loginController, registerController, stateController, citiesController, getProfileController,
-        updateUserController, updateCityController
+        updateUserController, updateCityController, getCouponController, changePasswordController,
+        logoutController, feedbackController
     } = require('../../controllers/v1/app/main/mainController')
 
 class MainRoutes {
@@ -62,6 +63,37 @@ class MainRoutes {
             Validator('updateUserProfile'),
             updateUserController
         )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-coupons',
+            verifyToken,
+            getCouponController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/change-password',
+            verifyToken,
+            Validator('changePassword'),
+            changePasswordController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/logout',
+            verifyToken,
+            logoutController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/add-feedback',
+            verifyToken,
+            Validator('addFeedback'),
+            feedbackController
+        )
+
     }
     routesConfig() {
         this.appMainRoutes()

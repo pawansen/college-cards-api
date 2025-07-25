@@ -6,11 +6,7 @@ const {
     getProfileServices,
     updateUserServices,
     updateCityServices,
-    addCouponServices,
-    getCouponServices,
-    changePasswordServices,
-    logoutServices,
-    feedbackServices
+    addCouponServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -158,82 +154,6 @@ exports.updateCityController = (req, res) => {
  */
 exports.addCouponController = (req, res) => {
     addCouponServices(req)
-        .then((response) => {
-            if (response.status) {
-                SuccessResponse(res, response.message, response.data)
-            } else {
-                ErrorResponse(res, response.message)
-            }
-        })
-        .catch((err) => {
-            ErrorResponse(res, err.message)
-        })
-}
-
-/**
- * add user.
- *
- * @returns {Object}
- */
-exports.getCouponController = (req, res) => {
-    getCouponServices(req)
-        .then((response) => {
-            if (response.status) {
-                SuccessResponse(res, response.message, response.data)
-            } else {
-                ErrorResponse(res, response.message)
-            }
-        })
-        .catch((err) => {
-            ErrorResponse(res, err.message)
-        })
-}
-
-/**
- * add user.
- *
- * @returns {Object}
- */
-exports.changePasswordController = (req, res) => {
-    changePasswordServices(req)
-        .then((response) => {
-            if (response.status) {
-                SuccessResponse(res, response.message, response.data)
-            } else {
-                ErrorResponse(res, response.message)
-            }
-        })
-        .catch((err) => {
-            ErrorResponse(res, err.message)
-        })
-}
-
-/**
- * add user.
- *
- * @returns {Object}
- */
-exports.logoutController = (req, res) => {
-    logoutServices(req)
-        .then((response) => {
-            if (response.status) {
-                SuccessResponse(res, response.message, response.data)
-            } else {
-                ErrorResponse(res, response.message)
-            }
-        })
-        .catch((err) => {
-            ErrorResponse(res, err.message)
-        })
-}
-
-/**
- * add user.
- *
- * @returns {Object}
- */
-exports.feedbackController = (req, res) => {
-    feedbackServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

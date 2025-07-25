@@ -17,7 +17,7 @@ const CouponSchema = new Schema({
     },
     amountType: {
         type: String,
-        enum: ['percentage', 'amount'], // Only allow 'percentage' or 'amount'
+        enum: ['percentage', 'amount'],
         required: false
     },
     description: {
@@ -28,9 +28,11 @@ const CouponSchema = new Schema({
         type: String,
         required: false
     },
-    address: {
-        address: { type: String, required: false },
-    },
+    address: [
+        {
+            address: { type: String, required: false }
+        }
+    ],
     logo: {
         type: String,
         required: false

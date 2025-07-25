@@ -197,9 +197,28 @@ const updateCity = Joi.object({
   Authorization: Joi.string().allow('').optional(),
 })
 
+const addCoupon = Joi.object({
+  title: Joi.string().required(),
+  code: Joi.string().required(),
+  amount: Joi.number().required(),
+  amountType: Joi.string().valid('percentage', 'fixed').required(),
+  description: Joi.string().allow('').optional(),
+  address: Joi.string().required(),
+  city_id: Joi.number().required(),
+  Authorization: Joi.string().allow('').optional(),
+  couponLogo: Joi.string().allow('').optional(),
+})
+
+const addFeedback = Joi.object({
+  description: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
 module.exports = {
   addRole,
   updateCity,
+  addCoupon,
+  addFeedback,
   updateUserProfile,
   getRoleInfo,
   updateRole,
