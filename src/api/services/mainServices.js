@@ -18,6 +18,8 @@ const bcrypt = require('bcrypt'),
     userCitiesSchema = require('../domain/schema/mongoose/userCities.schema'),
     couponSchema = require('../domain/schema/mongoose/coupon.schema'),
     FeedbackSchema = require('../domain/schema/mongoose/feedback.schema'),
+    packageSchema = require('../domain/schema/mongoose/package.schema'),
+    UserSubscribeSchema = require('../domain/schema/mongoose/userSubscribe.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -37,9 +39,10 @@ exports.loginServices = async (req, res) => {
             .token(request, response)
             .then(async function (token) {
                 if (token.user.isActive) {
+                    console.log('User logged in successfully', token.user)
                     let data = {
-                        id: token.user.id,
-                        user_id: token.user.id,
+                        id: token.user._id,
+                        user_id: token.user._id,
                         firstName: token.user.firstName,
                         lastName: token.user.lastName,
                         email: token.user.email,
@@ -50,9 +53,36 @@ exports.loginServices = async (req, res) => {
                         referralCode: token.user.referralCode,
                         profileImage: env.UPLOAD_URL + token.user.profileImage,
                         deviceId: token.user.deviceId,
+                        isCityUpdated: false,
+                        isSubscribed: false,
+                        city_ids: [],
+                        subscription: null
+                    }
+                    let userCity = await userCitiesSchema.find({ user_id: token.user._id })
+                    if (userCity.length > 0) {
+                        data.isCityUpdated = true;
+                        data.city_ids = userCity.map(item => item.city_id);
+                    }
+                    // Check if user already has an active subscription
+                    const activeSubscription = await UserSubscribeSchema.findOne({
+                        user_id: token.user._id,
+                        status: 'active',
+                        endDate: { $gte: new Date() }
+                    });
+                    if (activeSubscription) {
+                        data.isSubscribed = true;
+                        data.subscription = {
+                            package_id: activeSubscription.package_id,
+                            cityCount: activeSubscription.cityCount,
+                            amount: activeSubscription.amount,
+                            packageType: activeSubscription.packageType,
+                            startDate: activeSubscription.startDate,
+                            endDate: activeSubscription.endDate,
+                            status: activeSubscription.status
+                        };
                     }
                     await userSchema.updateOne(
-                        { _id: token.user.id },
+                        { _id: token.user._id },
                         {
                             lastLoginAt: new Date(),
                             lastLoginIp: requestIp.getClientIp(req),
@@ -309,11 +339,13 @@ exports.updateCityServices = async (req, res) => {
         const { _id } = req.User;
         let { city_id } = req.body;
         // Insert or update userCities schema
-        await userCitiesSchema.updateOne(
-            { user_id: _id },
-            { city_id },
-            { upsert: true }
-        );
+        // Check if the city already exists for the user
+        const exists = await userCitiesSchema.findOne({ user_id: _id, city_id });
+        if (!exists) {
+            // Insert new record if not found
+            await userCitiesSchema.create({ user_id: _id, city_id });
+        }
+        // If exists, do nothing (no update)
         return { status: 1, message: 'User city updated successfully.' };
     } catch (err) {
         console.log(err)
@@ -342,7 +374,7 @@ exports.addCouponServices = async (req) => {
                     address: item.address || ''
                 }))
                 : [],
-            logo: file ? "/uploads/coupons/" + file.filename : null,
+            logo: file ? "/uploads/coupon/" + file.filename : null,
         }
         // Check if user with email or mobile already exists
         const existingUser = await couponSchema.findOne({
@@ -389,9 +421,50 @@ exports.getCouponServices = async (req, res) => {
         }
         let data = [];
         if (city_id) {
-            data = await couponSchema.find({ city_id: city_id }).skip(offset).limit(limits);
+            data = await couponSchema.find(
+                { city_id: city_id },
+                {
+                    _id: 0,
+                    "coupon_id": "$_id",
+                    title: 1,
+                    code: 1,
+                    amount: 1,
+                    amountType: 1,
+                    description: 1,
+                    city_id: 1,
+                    address: 1,
+                    logo: 1,
+                    create_at: 1
+                }
+            ).skip(offset).limit(limits);
+
+            // Add base path to logo
+            data = data.map(item => ({
+                ...item.toObject(),
+                logo: item.logo ? env.UPLOAD_URL + item.logo : null
+            }));
         } else {
-            data = await couponSchema.find(query).skip(offset).limit(limits);
+            data = await couponSchema.find(
+                query,
+                {
+                    _id: 0,
+                    "coupon_id": "$_id",
+                    title: 1,
+                    code: 1,
+                    amount: 1,
+                    amountType: 1,
+                    description: 1,
+                    city_id: 1,
+                    address: 1,
+                    logo: 1,
+                    create_at: 1
+                }
+            ).skip(offset).limit(limits);
+            // Add base path to logo
+            data = data.map(item => ({
+                ...item.toObject(),
+                logo: item.logo ? env.UPLOAD_URL + item.logo : null
+            }));
         }
         if (data.length > 0) {
             return {
@@ -485,5 +558,131 @@ exports.feedbackServices = async (req) => {
         return { status: 1, message: 'Feedback submitted successfully.' };
     } catch (err) {
         return err
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addPackageServices = async (req) => {
+    try {
+        let { body } = req;
+        let payload = {
+            cityCount: body.cityCount,
+            amount: body.amount,
+            title: body.title || 'College Cards Subscription',
+            packageType: body.packageType,
+        }
+        // Check if a package with the same cityCount already exists
+        const existingPackage = await packageSchema.findOne({ isActive: true });
+        if (existingPackage) {
+            // Update the existing package
+            await packageSchema.updateOne(
+                { _id: existingPackage._id },
+                { $set: payload }
+            );
+            return { status: 1, message: 'Package updated successfully.' };
+        } else {
+            // Create a new package
+            const newPackage = new packageSchema(payload);
+            return { status: 1, message: 'Package added successfully.' };
+        }
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getPackageServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const existingPackage = await packageSchema.findOne(
+            { isActive: true },
+            { _id: 0, "package_id": "$_id", title: 1, cityCount: 1, amount: 1, packageType: 1, isActive: 1 }
+        );
+        if (existingPackage) {
+            const existingUserCities = await userCitiesSchema.countDocuments({ user_id: _id });
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: {
+                    package: existingPackage,
+                    totalCities: existingUserCities,
+                    billingAmount: existingPackage.amount * existingUserCities
+                },
+            }
+        } else {
+            return { status: 0, message: 'No active package found.' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.userSubscribeServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const { package_id } = req.body;
+        const existingPackage = await packageSchema.findOne(
+            { _id: package_id },
+            { _id: 0, "package_id": "$_id", title: 1, cityCount: 1, amount: 1, packageType: 1, isActive: 1 }
+        );
+        if (existingPackage) {
+
+            // Check if user already has an active subscription
+            const activeSubscription = await UserSubscribeSchema.findOne({
+                user_id: _id,
+                status: 'active',
+                endDate: { $gte: new Date() }
+            });
+            if (activeSubscription) {
+                return {
+                    status: 0,
+                    message: 'You already have an active subscription.',
+                    data: activeSubscription
+                };
+            }
+            const existingUserCities = await userCitiesSchema.countDocuments({ user_id: _id });
+            const billingAmount = existingPackage.amount * existingUserCities;
+            // Calculate endDate based on packageType
+            let endDate = new Date();
+            if (existingPackage.packageType === 'yearly') {
+                endDate.setFullYear(endDate.getFullYear() + 1);
+            } else if (existingPackage.packageType === 'monthly') {
+                endDate.setMonth(endDate.getMonth() + 1);
+            }
+            await UserSubscribeSchema.create({
+                user_id: _id,
+                package_id: package_id,
+                cityCount: existingUserCities,
+                amount: billingAmount,
+                packageType: existingPackage.packageType,
+                startDate: new Date(),
+                endDate: endDate,
+                status: 'active'
+            });
+            return {
+                status: 1,
+                message: 'Successfully subscribed.',
+                data: existingPackage
+            }
+        } else {
+            return { status: 0, message: 'Invalid package ID.' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
     }
 }

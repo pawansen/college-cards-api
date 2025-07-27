@@ -2,8 +2,8 @@ const Validator = require('../../middlewares/validator'),
     { verifyToken } = require('../../middlewares/verifyToken'),
     Upload = require('../../middlewares/upload'),
     {
-        loginController, registerController, stateController, citiesController, getProfileController,
-        updateUserController, updateCityController, addCouponController
+        loginController, stateController, citiesController, getProfileController,
+        updateUserController, addCouponController, addPackageController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -54,6 +54,14 @@ class AdminRoutes {
             Upload('coupon').single('couponLogo'),
             Validator('addCoupon'),
             addCouponController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/add-package',
+            verifyToken,
+            Validator('addPackage'),
+            addPackageController
         )
     }
     routesConfig() {

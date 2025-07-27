@@ -10,7 +10,9 @@ const {
     getCouponServices,
     changePasswordServices,
     logoutServices,
-    feedbackServices
+    feedbackServices,
+    getPackageServices,
+    userSubscribeServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -234,6 +236,44 @@ exports.logoutController = (req, res) => {
  */
 exports.feedbackController = (req, res) => {
     feedbackServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getPackageController = (req, res) => {
+    getPackageServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.userSubscribeController = (req, res) => {
+    userSubscribeServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

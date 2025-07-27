@@ -214,9 +214,24 @@ const addFeedback = Joi.object({
   Authorization: Joi.string().allow('').optional(),
 })
 
+const addPackage = Joi.object({
+  cityCount: Joi.number().required(),
+  amount: Joi.number().required(),
+  packageType: Joi.string().valid('monthly', 'yearly').required(),
+  title: Joi.string().allow('').optional(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const userSubscribe = Joi.object({
+  package_id: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
 module.exports = {
   addRole,
   updateCity,
+  addPackage,
+  userSubscribe,
   addCoupon,
   addFeedback,
   updateUserProfile,
