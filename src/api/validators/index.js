@@ -182,13 +182,13 @@ const updateUserProfile = Joi.object({
     .max(10)
     .message('Mobile max length is 10')
     .required(),
-  email: Joi.string()
-    .email({ tlds: { allow: false } })
-    .required()
-    .messages({
-      'string.email': 'Email must be a valid email address',
-      'any.required': 'Email is required'
-    }),
+  // email: Joi.string()
+  //   .email({ tlds: { allow: false } })
+  //   .required()
+  //   .messages({
+  //     'string.email': 'Email must be a valid email address',
+  //     'any.required': 'Email is required'
+  //   }),
   profileImage: Joi.string().allow('').optional(),
 })
 

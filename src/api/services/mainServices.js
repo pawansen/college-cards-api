@@ -39,7 +39,6 @@ exports.loginServices = async (req, res) => {
             .token(request, response)
             .then(async function (token) {
                 if (token.user.isActive) {
-                    console.log('User logged in successfully', token.user)
                     let data = {
                         id: token.user._id,
                         user_id: token.user._id,
@@ -114,7 +113,7 @@ exports.loginServices = async (req, res) => {
  *
  * @returns {Object}
  */
-exports.registerServices = async (req) => {
+exports.registerServices = async (req, res) => {
     try {
         let { body, file } = req;
         let salt = bcrypt.genSaltSync(saltRounds)
@@ -144,7 +143,53 @@ exports.registerServices = async (req) => {
             // Create new user
             const newUser = new userSchema(payload);
             const savedUser = await newUser.save();
-            return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), user_id: savedUser._id, profileImage: env.UPLOAD_URL + savedUser.profileImage } };
+            // Remove sensitive fields before returning user object
+            delete savedUser.password;
+            delete savedUser.grant;
+            delete savedUser.auth_password;
+            delete savedUser.isActive;
+            delete savedUser.isDelete;
+            delete savedUser.isEmailVerified;
+            delete savedUser.isMobileVerified;
+
+            req.body.client_id = env.OAUTH_CLIENT_ID
+            req.body.client_secret = env.OAUTH_CLIENT_SECRET
+            req.body.username = body.email
+            req.body.email = body.email
+            req.body.password = body.password
+            req.body.grant_type = 'password'
+            req.headers['content-type'] = 'application/x-www-form-urlencoded';
+            let request = new Request(req)
+            let response = new Response(res)
+
+            return oauth
+                .token(request, response)
+                .then(async function (token) {
+                    const data = {
+                        id: savedUser._id,
+                        user_id: savedUser._id,
+                        firstName: savedUser.firstName,
+                        lastName: savedUser.lastName,
+                        email: savedUser.email,
+                        mobile: savedUser.mobile,
+                        role: savedUser.role,
+                        token: token.accessToken,
+                        refreshToken: token.refresh_token,
+                        referralCode: savedUser.referralCode,
+                        profileImage: savedUser.profileImage ? env.UPLOAD_URL + savedUser.profileImage : null,
+                        deviceId: savedUser.deviceId,
+                        isCityUpdated: false,
+                        isSubscribed: false,
+                        city_ids: [],
+                        subscription: null
+                    };
+                    return {
+                        status: 1, message: 'Successfully added', data: data
+                    };
+                })
+                .catch(function (err) {
+                    return { status: 0, message: 'User credentials are invalid.' }
+                })
         } else {
             return { status: 0, message: 'Email or Mobile is already exists' };
         }
@@ -275,7 +320,7 @@ exports.updateUserServices = async (req, res) => {
         let { file } = req;
         const { firstName, lastName, mobile, email, profileImage } = req.body;
         // Check if email or mobile exists for another user
-        const exists = await userSchema.findOne({
+        /*const exists = await userSchema.findOne({
             $and: [
                 { _id: { $ne: _id } },
                 { $or: [{ email }, { mobile }] }
@@ -283,14 +328,14 @@ exports.updateUserServices = async (req, res) => {
         });
         if (exists) {
             return { status: 0, message: 'Email or Mobile already exists for another user.' };
-        }
+        }*/
 
         // Update user
         const updatePayload = {
             firstName,
             lastName,
             mobile,
-            email,
+            // email,
         };
         if (file) {
             updatePayload.profileImage = "/uploads/users/" + file.filename;
@@ -533,7 +578,7 @@ exports.logoutServices = async (req) => {
     try {
         const { _id } = req.User;
         // Invalidate all OAuth tokens for the current user
-        await OAuthTokenSchema.deleteMany({ user_id: _id });
+        //await OAuthTokenSchema.deleteMany({ user_id: _id });
         return { status: 1, message: 'Logged out successfully.' };
     } catch (err) {
         return err
@@ -680,6 +725,35 @@ exports.userSubscribeServices = async (req, res) => {
             }
         } else {
             return { status: 0, message: 'Invalid package ID.' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getUserSubscribeServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        // Fetch the user's active subscription
+        // Check if user already has an active subscription
+        const activeSubscription = await UserSubscribeSchema.findOne({
+            user_id: _id,
+            status: 'active',
+        });
+        if (activeSubscription) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: { ...activeSubscription.toObject(), id: activeSubscription._id }
+            }
+        } else {
+            return { status: 0, message: 'You do not have an active subscription.' }
         }
     } catch (err) {
         console.log(err)

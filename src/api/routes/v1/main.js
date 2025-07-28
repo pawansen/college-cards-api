@@ -4,7 +4,7 @@ const Validator = require('../../middlewares/validator'),
     {
         loginController, registerController, stateController, citiesController, getProfileController,
         updateUserController, updateCityController, getCouponController, changePasswordController,
-        logoutController, feedbackController, getPackageController, userSubscribeController
+        logoutController, feedbackController, getPackageController, userSubscribeController, getUserSubscribeController
     } = require('../../controllers/v1/app/main/mainController')
 
 class MainRoutes {
@@ -107,6 +107,13 @@ class MainRoutes {
             verifyToken,
             Validator('userSubscribe'),
             userSubscribeController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-user-subscribe',
+            verifyToken,
+            getUserSubscribeController
         )
 
     }
