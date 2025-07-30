@@ -13,7 +13,9 @@ const {
     feedbackServices,
     getPackageServices,
     userSubscribeServices,
-    getUserSubscribeServices
+    getUserSubscribeServices,
+    getPaymentHistoryServices,
+    getRefreshTokenServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -295,6 +297,45 @@ exports.userSubscribeController = (req, res) => {
  */
 exports.getUserSubscribeController = (req, res) => {
     getUserSubscribeServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getPaymentHistoryController = (req, res) => {
+    getPaymentHistoryServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getRefreshTokenController = (req, res) => {
+    getRefreshTokenServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

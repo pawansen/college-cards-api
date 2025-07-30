@@ -2,7 +2,6 @@ const { env } = require('../../infrastructure/env'),
   bcrypt = require('bcrypt'),
   saltRounds = 10;
 const OAuthTokenSchema = require('../domain/schema/mongoose/oauthTokens.schema');
-const roleSchema = require('../domain/schema/mongoose/role.schema');
 const userSchema = require('../domain/schema/mongoose/user.schema');
 /**
  * Get client.
@@ -51,16 +50,28 @@ module.exports.saveToken = async function (token, client, user) {
 
 module.exports.getRefreshToken = async function (bearerToken) {
   const result = await OAuthTokenSchema.findOne({ refresh_token: bearerToken }).lean();
-  return result ? result : false;
-}
+
+  if (!result) return false;
+  if (new Date(result.refresh_token_expires_on) < new Date()) return false; // expired
+  console.log('getRefreshToken', {
+    refreshToken: result.refresh_token,
+    refreshTokenExpiresAt: new Date(result.refresh_token_expires_on),
+    client: { id: result.client_id },
+    user: JSON.parse(result.user),
+  });
+  return {
+    refreshToken: result.refresh_token,
+    refreshTokenExpiresAt: new Date(result.refresh_token_expires_on),
+    client: result.client_id,
+    user: JSON.parse(result.user),
+  };
+};
 
 /*
  * Get user.
  */
 
 module.exports.getUser = async function (email, password) {
-  console.log('getUser called with email:', email);
-  console.log('getUser called with password:', password);
   const user = await userSchema.findOne(
     { email: email, isActive: true },
     {
@@ -83,7 +94,6 @@ module.exports.getUser = async function (email, password) {
     }
   ).lean();
   if (user) {
-    console.log('getUser called with user:', user);
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return false;
@@ -110,4 +120,9 @@ module.exports.getAccessToken = async function (bearerToken) {
       user: JSON.parse(result.user),
     }
     : false;
+}
+
+module.exports.revokeToken = async function (token) {
+  const result = await OAuthTokenSchema.deleteOne({ refresh_token: token.refreshToken });
+  return result.deletedCount > 0;
 }

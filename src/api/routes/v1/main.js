@@ -4,7 +4,8 @@ const Validator = require('../../middlewares/validator'),
     {
         loginController, registerController, stateController, citiesController, getProfileController,
         updateUserController, updateCityController, getCouponController, changePasswordController,
-        logoutController, feedbackController, getPackageController, userSubscribeController, getUserSubscribeController
+        logoutController, feedbackController, getPackageController, userSubscribeController, getUserSubscribeController,
+        getPaymentHistoryController, getRefreshTokenController
     } = require('../../controllers/v1/app/main/mainController')
 
 class MainRoutes {
@@ -23,6 +24,12 @@ class MainRoutes {
             Upload('users').single('profileImage'),
             Validator('addUser'),
             registerController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/get-refresh-token',
+            getRefreshTokenController
         )
 
         /** apis */
@@ -114,6 +121,13 @@ class MainRoutes {
             '/v1/get-user-subscribe',
             verifyToken,
             getUserSubscribeController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-payment-history',
+            verifyToken,
+            getPaymentHistoryController
         )
 
     }

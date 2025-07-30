@@ -1,16 +1,16 @@
 const bcrypt = require('bcrypt'),
     saltRounds = 10,
     { getOffset } = require('../utils/utility'),
-    { logger } = require('../lib/logger'),
     { env } = require('../../infrastructure/env'),
     OAuth2Server = require('oauth2-server'),
     requestIp = require('request-ip'),
     oauth = new OAuth2Server({
         model: require('./oauth2Services'),
         allowBearerTokensInQueryString: true,
-        accessTokenLifetime: env.OAUTH_TOKEN_EXPIRE,
+        // accessTokenLifetime: env.OAUTH_TOKEN_EXPIRE,
+        accessTokenLifetime: 60 * 5, // 5 mins
+        refreshTokenLifetime: 60 * 60 * 24 * 30, // 30 days
     }),
-    getCurrentLine = require('get-current-line'),
     userSchema = require('../domain/schema/mongoose/user.schema'),
     OAuthTokenSchema = require('../domain/schema/mongoose/oauthTokens.schema'),
     stateSchema = require('../domain/schema/mongoose/state.schema'),
@@ -20,6 +20,7 @@ const bcrypt = require('bcrypt'),
     FeedbackSchema = require('../domain/schema/mongoose/feedback.schema'),
     packageSchema = require('../domain/schema/mongoose/package.schema'),
     UserSubscribeSchema = require('../domain/schema/mongoose/userSubscribe.schema'),
+    UserPaymentsSchema = require('../domain/schema/mongoose/payment.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -55,12 +56,18 @@ exports.loginServices = async (req, res) => {
                         isCityUpdated: false,
                         isSubscribed: false,
                         city_ids: [],
-                        subscription: null
+                        subscription: null,
+                        cityList: [],
                     }
                     let userCity = await userCitiesSchema.find({ user_id: token.user._id })
                     if (userCity.length > 0) {
                         data.isCityUpdated = true;
                         data.city_ids = userCity.map(item => item.city_id);
+                        const cities = await citiesSchema.find({ id: { $in: data.city_ids } });
+                        data.cityList = cities.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                        }));
                     }
                     // Check if user already has an active subscription
                     const activeSubscription = await UserSubscribeSchema.findOne({
@@ -100,6 +107,7 @@ exports.loginServices = async (req, res) => {
                 }
             })
             .catch(function (err) {
+                console.log(err)
                 return { status: 0, message: 'User credentials are invalid.' }
             })
     } catch (err) {
@@ -578,7 +586,7 @@ exports.logoutServices = async (req) => {
     try {
         const { _id } = req.User;
         // Invalidate all OAuth tokens for the current user
-        //await OAuthTokenSchema.deleteMany({ user_id: _id });
+        await OAuthTokenSchema.deleteMany({ user_id: _id });
         return { status: 1, message: 'Logged out successfully.' };
     } catch (err) {
         return err
@@ -708,7 +716,7 @@ exports.userSubscribeServices = async (req, res) => {
             } else if (existingPackage.packageType === 'monthly') {
                 endDate.setMonth(endDate.getMonth() + 1);
             }
-            await UserSubscribeSchema.create({
+            const subscribeInfo = await UserSubscribeSchema.create({
                 user_id: _id,
                 package_id: package_id,
                 cityCount: existingUserCities,
@@ -718,6 +726,25 @@ exports.userSubscribeServices = async (req, res) => {
                 endDate: endDate,
                 status: 'active'
             });
+            if (subscribeInfo) {
+                // Create a payment record for the subscription
+                await UserPaymentsSchema.create({
+                    user_id: _id,
+                    package_id: package_id,
+                    subscription_id: subscribeInfo._id, // This can be updated later if needed
+                    amount: billingAmount,
+                    currency: 'USD', // Assuming USD, can be changed based on requirements
+                    paymentMethod: 'manual', // Assuming manual payment, can be changed based on requirements
+                    transactionId: null, // This can be updated later if needed
+                    gateway: 'manual', // Assuming manual gateway, can be changed based on requirements
+                    receiptUrl: null, // This can be updated later if needed
+                    refundedAmount: 0,
+                    notes: 'Subscription for package ' + existingPackage.title,
+                    paymentDate: new Date(),
+                    status: 'completed', // Assuming completed, can be changed based on requirements
+                });
+            }
+
             return {
                 status: 1,
                 message: 'Successfully subscribed.',
@@ -747,10 +774,21 @@ exports.getUserSubscribeServices = async (req, res) => {
             status: 'active',
         });
         if (activeSubscription) {
+            const cityInfo = {};
+            let userCity = await userCitiesSchema.find({ user_id: _id })
+            if (userCity.length > 0) {
+                cityInfo.city_ids = userCity.map(item => item.city_id);
+                const cities = await citiesSchema.find({ id: { $in: cityInfo.city_ids } });
+                cityInfo.cityList = cities.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                }));
+            }
+
             return {
                 status: 1,
                 message: 'Successfully listed.',
-                data: { ...activeSubscription.toObject(), id: activeSubscription._id }
+                data: { ...activeSubscription.toObject(), id: activeSubscription._id, ...cityInfo }
             }
         } else {
             return { status: 0, message: 'You do not have an active subscription.' }
@@ -758,5 +796,100 @@ exports.getUserSubscribeServices = async (req, res) => {
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getPaymentHistoryServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const { city_id, limit, pageNo } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+        // Fetch all cities from the database
+        const userCities = await userCitiesSchema.find({ user_id: _id });
+        // If userCities found, extract city_id into a new array
+        let userCityIds = [];
+        if (userCities && userCities.length > 0) {
+            userCityIds = userCities.map(item => item.city_id);
+        }
+        // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
+        let query = { user_id: _id };
+        let data = await UserPaymentsSchema.find(
+            query,
+            {
+                _id: 0,
+                "payment_id": "$_id",
+                user_id: 1,
+                package_id: 1,
+                subscription_id: 1,
+                amount: 1,
+                currency: 1,
+                paymentMethod: 1,
+                transactionId: 1,
+                gateway: 1,
+                receiptUrl: 1,
+                refundedAmount: 1,
+                notes: 1,
+                paymentDate: 1,
+                status: 1
+            }
+        ).skip(offset).limit(limits);
+
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getRefreshTokenServices = async (req, res) => {
+    try {
+        req.body.client_id = env.OAUTH_CLIENT_ID;
+        req.body.client_secret = env.OAUTH_CLIENT_SECRET;
+        req.body.grant_type = 'refresh_token';
+        // The refresh token should be sent in req.body.refresh_token
+        let request = new Request(req);
+        let response = new Response(res);
+
+        return oauth
+            .token(request, response)
+            .then(function (token) {
+                return {
+                    status: 1,
+                    message: 'Token refreshed successfully.',
+                    data: {
+                        accessToken: token.accessToken,
+                        refreshToken: token.refresh_token,
+                        expiresIn: token.accessTokenExpiresAt,
+                        ...token.user
+                    }
+                };
+            })
+            .catch(function (err) {
+                console.log(err);
+                return { status: 0, message: 'Invalid refresh token.' };
+            });
+    } catch (err) {
+        console.log(err);
+        return { status: 0, message: err.message || 'Refresh token failed.' };
     }
 }
