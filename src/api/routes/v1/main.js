@@ -5,7 +5,7 @@ const Validator = require('../../middlewares/validator'),
         loginController, registerController, stateController, citiesController, getProfileController,
         updateUserController, updateCityController, getCouponController, changePasswordController,
         logoutController, feedbackController, getPackageController, userSubscribeController, getUserSubscribeController,
-        getPaymentHistoryController, getRefreshTokenController
+        getPaymentHistoryController, getRefreshTokenController, getReferralController, getNotificationController
     } = require('../../controllers/v1/app/main/mainController')
 
 class MainRoutes {
@@ -128,6 +128,19 @@ class MainRoutes {
             '/v1/get-payment-history',
             verifyToken,
             getPaymentHistoryController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-referrals',
+            verifyToken,
+            getReferralController
+        )
+        /** apis */
+        this.app.get(
+            '/v1/get-notifications',
+            verifyToken,
+            getNotificationController
         )
 
     }

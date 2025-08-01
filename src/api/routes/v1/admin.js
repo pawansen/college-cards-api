@@ -1,9 +1,9 @@
 const Validator = require('../../middlewares/validator'),
-    { verifyToken } = require('../../middlewares/verifyToken'),
+    { verifyToken, verifyTokenAdmin } = require('../../middlewares/verifyToken'),
     Upload = require('../../middlewares/upload'),
     {
         loginController, stateController, citiesController, getProfileController,
-        updateUserController, addCouponController, addPackageController
+        updateUserController, addCouponController, addPackageController, getUserController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -19,14 +19,14 @@ class AdminRoutes {
         /** apis */
         this.app.get(
             '/v1/admin/states',
-            verifyToken,
+            verifyTokenAdmin,
             stateController
         )
 
         /** apis */
         this.app.get(
             '/v1/admin/cities',
-            verifyToken,
+            verifyTokenAdmin,
             // Validator('getCities'),
             citiesController
         )
@@ -34,14 +34,14 @@ class AdminRoutes {
         /** apis */
         this.app.get(
             '/v1/admin/get-profile',
-            verifyToken,
+            verifyTokenAdmin,
             getProfileController
         )
 
         /** apis */
         this.app.post(
             '/v1/admin/update-profile',
-            verifyToken,
+            verifyTokenAdmin,
             Upload('users').single('profileImage'),
             Validator('updateUserProfile'),
             updateUserController
@@ -50,7 +50,7 @@ class AdminRoutes {
         /** apis */
         this.app.post(
             '/v1/admin/add-coupon',
-            verifyToken,
+            verifyTokenAdmin,
             Upload('coupon').single('couponLogo'),
             Validator('addCoupon'),
             addCouponController
@@ -59,9 +59,17 @@ class AdminRoutes {
         /** apis */
         this.app.post(
             '/v1/admin/add-package',
-            verifyToken,
+            verifyTokenAdmin,
             Validator('addPackage'),
             addPackageController
+        )
+
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-users',
+            verifyTokenAdmin,
+            getUserController
         )
     }
     routesConfig() {

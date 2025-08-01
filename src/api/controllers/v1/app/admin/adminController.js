@@ -7,8 +7,9 @@ const {
     updateUserServices,
     updateCityServices,
     addCouponServices,
-    addPackageServices
-} = require('../../../../services/mainServices'),
+    addPackageServices,
+    getUserServices
+} = require('../../../../services/adminService'),
     {
         ErrorResponse,
         SuccessResponse
@@ -174,6 +175,25 @@ exports.addCouponController = (req, res) => {
  */
 exports.addPackageController = (req, res) => {
     addPackageServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getUserController = (req, res) => {
+    getUserServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

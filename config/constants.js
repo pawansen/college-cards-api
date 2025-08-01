@@ -14,6 +14,7 @@ exports.ERROR_MESSAGES = {
   AUTHORIZATION_TOKEN_EXPIRED: 'Authorization token expired',
   AUTHORIZATION_TOKEN_INVALID_WITH_USERID:
     'Authorization token not associated with this User Id',
+  AUTHORIZATION_TOKEN_ACCESS_DENIED: 'Authorization token access denied',
 }
 exports.SUCCESS_MESSAGE = {
   OK: 'Ok',

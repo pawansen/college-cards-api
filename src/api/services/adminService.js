@@ -21,7 +21,6 @@ const bcrypt = require('bcrypt'),
     packageSchema = require('../domain/schema/mongoose/package.schema'),
     UserSubscribeSchema = require('../domain/schema/mongoose/userSubscribe.schema'),
     UserPaymentsSchema = require('../domain/schema/mongoose/payment.schema'),
-    notificationSchema = require('../domain/schema/mongoose/notification.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -41,68 +40,36 @@ exports.loginServices = async (req, res) => {
             .token(request, response)
             .then(async function (token) {
                 if (token.user.isActive) {
-                    let data = {
-                        id: token.user._id,
-                        user_id: token.user._id,
-                        firstName: token.user.firstName,
-                        lastName: token.user.lastName,
-                        email: token.user.email,
-                        mobile: token.user.mobile,
-                        role: token.user.role,
-                        token: token.accessToken,
-                        refreshToken: token.refresh_token,
-                        referralCode: token.user.referralCode,
-                        profileImage: env.UPLOAD_URL + token.user.profileImage,
-                        deviceId: token.user.deviceId,
-                        isCityUpdated: false,
-                        isSubscribed: false,
-                        city_ids: [],
-                        subscription: null,
-                        cityList: [],
-                    }
-                    let userCity = await userCitiesSchema.find({ user_id: token.user._id })
-                    if (userCity.length > 0) {
-                        data.isCityUpdated = true;
-                        data.city_ids = userCity.map(item => item.city_id);
-                        const cities = await citiesSchema.find({ id: { $in: data.city_ids } });
-                        data.cityList = cities.map(item => ({
-                            id: item.id,
-                            name: item.name,
-                        }));
-                    }
-                    // Check if user already has an active subscription
-                    const activeSubscription = await UserSubscribeSchema.findOne({
-                        user_id: token.user._id,
-                        status: 'active',
-                        endDate: { $gte: new Date() }
-                    });
-                    if (activeSubscription) {
-                        data.isSubscribed = true;
-                        data.subscription = {
-                            package_id: activeSubscription.package_id,
-                            cityCount: activeSubscription.cityCount,
-                            amount: activeSubscription.amount,
-                            packageType: activeSubscription.packageType,
-                            startDate: activeSubscription.startDate,
-                            endDate: activeSubscription.endDate,
-                            status: activeSubscription.status
-                        };
-                    }
-                    await userSchema.updateOne(
-                        { _id: token.user._id },
-                        {
-                            lastLoginAt: new Date(),
-                            lastLoginIp: requestIp.getClientIp(req),
-                            deviceType: req.body.deviceType || 'android',
-                            deviceToken: req.body.deviceToken || null,
-                            loginType: 'app',
+                    if (token.user.role === 'admin') {
+                        let data = {
+                            user_id: token.user._id,
+                            firstName: token.user.firstName,
+                            lastName: token.user.lastName,
+                            email: token.user.email,
+                            role: token.user.role,
+                            token: token.accessToken,
+                            refreshToken: token.refresh_token,
+                            profileImage: env.UPLOAD_URL + token.user.profileImage,
                         }
-                    )
-                    return {
-                        status: 1,
-                        message: 'User successfully logged in.',
-                        data,
+                        await userSchema.updateOne(
+                            { _id: token.user._id },
+                            {
+                                lastLoginAt: new Date(),
+                                lastLoginIp: requestIp.getClientIp(req),
+                                deviceType: req.body.deviceType || 'web',
+                                deviceToken: req.body.deviceToken || null,
+                                loginType: 'app',
+                            }
+                        )
+                        return {
+                            status: 1,
+                            message: 'User successfully logged in.',
+                            data,
+                        }
+                    } else {
+                        return { status: 0, message: 'Your Account is not authorized to access this resource.' }
                     }
+
                 } else {
                     return { status: 0, message: 'Your Account is inActive, Please contact to administrator!' }
                 }
@@ -141,15 +108,7 @@ exports.registerServices = async (req, res) => {
             deviceType: body.deviceType,
             deviceToken: body.deviceToken,
             referralCode: referralCode.replace(/\s+/g, ''),
-            profileImage: file ? "/uploads/users/" + file.filename : null
-        }
-        let referrer;
-        if (body.referralCode) {
-            // Check if the referral code exists
-            referrer = await userSchema.findOne({ referralCode: body.referralCode });
-            if (!referrer) {
-                return { status: 0, message: 'Referral code is invalid.' }
-            }
+            profileImage: file ? "/uploads/users/" + file.filename : null,
         }
         // Check if user with email or mobile already exists
         const existingUser = await userSchema.findOne({
@@ -178,20 +137,10 @@ exports.registerServices = async (req, res) => {
             req.headers['content-type'] = 'application/x-www-form-urlencoded';
             let request = new Request(req)
             let response = new Response(res)
+
             return oauth
                 .token(request, response)
                 .then(async function (token) {
-                    if (body.referralCode) {
-                        if (referrer) {
-                            const updateResult = await userSchema.updateOne(
-                                { _id: savedUser._id },
-                                { $set: { referredBy: referrer._id } }
-                            );
-                            if (updateResult.modifiedCount === 0) {
-                                return { status: 0, message: 'Failed to update referrer.' };
-                            }
-                        }
-                    }
                     const data = {
                         id: savedUser._id,
                         user_id: savedUser._id,
@@ -215,7 +164,7 @@ exports.registerServices = async (req, res) => {
                     };
                 })
                 .catch(function (err) {
-                    return { status: 0, message: err.message };
+                    return { status: 0, message: 'User credentials are invalid.' }
                 })
         } else {
             return { status: 0, message: 'Email or Mobile is already exists' };
@@ -762,15 +711,6 @@ exports.userSubscribeServices = async (req, res) => {
                     paymentDate: new Date(),
                     status: 'completed', // Assuming completed, can be changed based on requirements
                 });
-
-                await notificationSchema.create({
-                    user_id: _id,
-                    title: 'Subscription Successful',
-                    message: `You have successfully subscribed to the ${ existingPackage.title } package.`,
-                    type: 'subscription',
-                    entity_id: subscribeInfo._id,
-                    is_read: false,
-                });
             }
 
             return {
@@ -927,67 +867,14 @@ exports.getRefreshTokenServices = async (req, res) => {
  *
  * @returns {Object}
  */
-exports.getReferralServices = async (req, res) => {
+exports.getUserServices = async (req, res) => {
     try {
-        const { _id } = req.User;
         const { limit, pageNo } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
         const data = await userSchema.find(
-            { referredBy: _id },
-            {
-                _id: 0,
-                "user_id": "$_id",
-                name: 1,
-                email: 1,
-                phone: 1,
-                city_id: 1,
-                address: 1,
-                profileImage: 1,
-                referredBy: 1,
-                create_at: 1
-            }
-        ).sort({ create_at: -1 }).skip(offset).limit(limits);
-
-        if (data.length > 0) {
-            return {
-                status: 1,
-                message: 'Successfully listed.',
-                data,
-            }
-        } else {
-            return { status: 0, message: 'Records not found' }
-        }
-    } catch (err) {
-        console.log(err)
-        return { status: 0, message: err }
-    }
-}
-
-/**
- * login.
- *
- * @returns {Object}
- */
-exports.getNotificationServices = async (req, res) => {
-    try {
-        const { _id } = req.User;
-        const { limit, pageNo } = req.query;
-        const limits = limit ? parseInt(limit) : 10
-        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
-        const data = await notificationSchema.find(
-            { user_id: _id },
-            {
-                _id: 0,
-                "notification_id": "$_id",
-                title: 1,
-                message: 1,
-                type: 1,
-                entity_id: 1,
-                is_read: 1,
-                create_at: 1
-            }
-        ).sort({ create_at: -1 }).skip(offset).limit(limits);
+            { role: { $ne: 'admin' } }
+        ).sort({ createDate: -1 }).skip(offset).limit(limits);
 
         if (data.length > 0) {
             return {

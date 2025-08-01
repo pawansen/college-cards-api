@@ -15,7 +15,9 @@ const {
     userSubscribeServices,
     getUserSubscribeServices,
     getPaymentHistoryServices,
-    getRefreshTokenServices
+    getRefreshTokenServices,
+    getReferralServices,
+    getNotificationServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -336,6 +338,44 @@ exports.getPaymentHistoryController = (req, res) => {
  */
 exports.getRefreshTokenController = (req, res) => {
     getRefreshTokenServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getReferralController = (req, res) => {
+    getReferralServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getNotificationController = (req, res) => {
+    getNotificationServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)
