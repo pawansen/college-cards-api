@@ -624,7 +624,8 @@ exports.feedbackServices = async (req) => {
         // Save feedback to the database
         const feedbackEntry = new FeedbackSchema({
             user_id: _id,
-            description: description
+            description: description,
+            feedback_type: 'direct', // Assuming direct feedback type
         });
         await feedbackEntry.save();
         return { status: 1, message: 'Feedback submitted successfully.' };
@@ -726,8 +727,11 @@ exports.userSubscribeServices = async (req, res) => {
                     data: activeSubscription
                 };
             }
-            const existingUserCities = await userCitiesSchema.countDocuments({ user_id: _id });
-            const billingAmount = existingPackage.amount * existingUserCities;
+            const existingUserCities = await userCitiesSchema.find({ user_id: _id });
+            const cityCount = existingUserCities.length;
+            const userCityIds = existingUserCities.map(item => item.city_id);
+
+            const billingAmount = existingPackage.amount * cityCount;
             // Calculate endDate based on packageType
             let endDate = new Date();
             if (existingPackage.packageType === 'yearly') {
@@ -735,10 +739,22 @@ exports.userSubscribeServices = async (req, res) => {
             } else if (existingPackage.packageType === 'monthly') {
                 endDate.setMonth(endDate.getMonth() + 1);
             }
+            console.log('End Date:', {
+                user_id: _id,
+                package_id: package_id,
+                cityCount: cityCount,
+                city_ids: userCityIds,
+                amount: billingAmount,
+                packageType: existingPackage.packageType,
+                startDate: new Date(),
+                endDate: endDate,
+                status: 'active'
+            });
             const subscribeInfo = await UserSubscribeSchema.create({
                 user_id: _id,
                 package_id: package_id,
-                cityCount: existingUserCities,
+                cityCount: cityCount,
+                city_ids: userCityIds,
                 amount: billingAmount,
                 packageType: existingPackage.packageType,
                 startDate: new Date(),
@@ -998,6 +1014,44 @@ exports.getNotificationServices = async (req, res) => {
         } else {
             return { status: 0, message: 'Records not found' }
         }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+
+exports.getUserFeedbackServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        // Find all subscriptions for the user and join with package info
+        // Get all feedback entries for the user and join with user info
+
+        const activeSubscription = await FeedbackSchema.find({ user_id: _id, feedback_type: 'direct' })
+            .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+            .lean();
+
+        // For each feedback, get its replies (self-join where feedback_id === _id)
+        for (let feedback of activeSubscription) {
+            feedback.replies = await FeedbackSchema.find({ feedback_id: feedback._id })
+                .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+                .lean();
+        }
+        if (activeSubscription.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: activeSubscription,
+            }
+        } else {
+            return { status: 0, message: 'No feedback found.' }
+        }
+
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }

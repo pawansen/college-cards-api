@@ -7,6 +7,7 @@ const feedbackSchema = new Schema(
             type: String,
             required: true,
             trim: true,
+            ref: 'users', // Reference to users collection
         },
         entity_id: {
             type: String,
@@ -15,6 +16,15 @@ const feedbackSchema = new Schema(
         entity_type: {
             type: String,
             required: false,
+        },
+        feedback_id: {
+            type: String,
+            required: false,
+        },
+        feedback_type: {
+            type: String,
+            required: true,
+            enum: ['direct', 'reply'], // Only allow 'direct' or 'reply'
         },
         description: {
             type: String,

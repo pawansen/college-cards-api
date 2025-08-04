@@ -36,8 +36,12 @@ exports.loginServices = async (req, res) => {
         req.body.username = req.body.email
         let request = new Request(req)
         let response = new Response(res)
+        const TokenOptions = {
+            accessTokenLifetime: env.OAUTH_TOKEN_EXPIRE,
+            refreshTokenLifetime: env.OAUTH_TOKEN_EXPIRE,
+        }
         return oauth
-            .token(request, response)
+            .token(request, response, TokenOptions)
             .then(async function (token) {
                 if (token.user.isActive) {
                     if (token.user.role === 'admin') {
@@ -383,12 +387,20 @@ exports.addCouponServices = async (req) => {
     try {
         let { body, file } = req;
         const address = body.address ? JSON.parse(body.address) : [];
+        // Generate a random code: 3 letters + 3 digits
+        function generateRandomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const letters = Array.from({ length: 3 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+            const numbers = Math.floor(100 + Math.random() * 900); // 3 digits
+            return letters + numbers;
+        }
+
         let payload = {
             title: body.title,
-            code: body.code,
+            code: body.code || generateRandomCode(),
             amount: body.amount,
-            amountType: body.amountType,
-            description: body.description,
+            amountType: "percentage",
+            // description: body.description,
             city_id: body.city_id,
             address: Array.isArray(address) && address.length > 0
                 ? address.map(item => ({
@@ -423,70 +435,41 @@ exports.addCouponServices = async (req) => {
 exports.getCouponServices = async (req, res) => {
     try {
         const { _id } = req.User;
-        const { city_id, limit, pageNo } = req.query;
+        const { city_id, keyward, limit, pageNo } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
-        // Fetch all cities from the database
-        const userCities = await userCitiesSchema.find({ user_id: _id });
-        // If userCities found, extract city_id into a new array
-        let userCityIds = [];
-        if (userCities && userCities.length > 0) {
-            userCityIds = userCities.map(item => item.city_id);
-        }
         // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
         let query = {};
-        if (userCityIds && userCityIds.length > 0) {
-            query.city_id = { $in: userCityIds };
-        } else if (city_id) {
+        if (city_id) {
             query.city_id = city_id;
         }
-        let data = [];
-        if (city_id) {
-            data = await couponSchema.find(
-                { city_id: city_id },
-                {
-                    _id: 0,
-                    "coupon_id": "$_id",
-                    title: 1,
-                    code: 1,
-                    amount: 1,
-                    amountType: 1,
-                    description: 1,
-                    city_id: 1,
-                    address: 1,
-                    logo: 1,
-                    create_at: 1
-                }
-            ).skip(offset).limit(limits);
-
-            // Add base path to logo
-            data = data.map(item => ({
-                ...item.toObject(),
-                logo: item.logo ? env.UPLOAD_URL + item.logo : null
-            }));
-        } else {
-            data = await couponSchema.find(
-                query,
-                {
-                    _id: 0,
-                    "coupon_id": "$_id",
-                    title: 1,
-                    code: 1,
-                    amount: 1,
-                    amountType: 1,
-                    description: 1,
-                    city_id: 1,
-                    address: 1,
-                    logo: 1,
-                    create_at: 1
-                }
-            ).skip(offset).limit(limits);
-            // Add base path to logo
-            data = data.map(item => ({
-                ...item.toObject(),
-                logo: item.logo ? env.UPLOAD_URL + item.logo : null
-            }));
+        if (keyward) {
+            query.$or = [
+                { title: { $regex: keyward, $options: 'i' } },
+                { code: { $regex: keyward, $options: 'i' } }
+            ];
         }
+        let data = await couponSchema.find(
+            query,
+            {
+                _id: 0,
+                "coupon_id": "$_id",
+                title: 1,
+                code: 1,
+                amount: 1,
+                amountType: 1,
+                description: 1,
+                city_id: 1,
+                address: 1,
+                logo: 1,
+                create_at: 1
+            }
+        ).skip(offset).limit(limits);
+        // Add base path to logo
+        data = data.map(item => ({
+            ...item.toObject(),
+            logo: item.logo ? env.UPLOAD_URL + item.logo : null
+        }));
         if (data.length > 0) {
             return {
                 status: 1,
@@ -499,6 +482,29 @@ exports.getCouponServices = async (req, res) => {
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteCouponServices = async (req) => {
+    try {
+        let { body } = req;
+        // Delete coupon by code and city_id
+        const deletedCoupon = await couponSchema.findOneAndDelete({
+            _id: body.coupon_id,
+        });
+
+        if (deletedCoupon) {
+            return { status: 1, message: 'Coupon deleted successfully.' };
+        } else {
+            return { status: 0, message: 'Coupon not found.' };
+        }
+    } catch (err) {
+        return err
     }
 }
 
@@ -885,6 +891,264 @@ exports.getUserServices = async (req, res) => {
         } else {
             return { status: 0, message: 'Records not found' }
         }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getUserInfoServices = async (req, res) => {
+    try {
+        const { user_id } = req.query;
+        const user = await userSchema.findOne(
+            { _id: user_id },
+        ).lean();
+        if (user) {
+            const data = {
+                ...user,
+                isCityUpdated: false,
+                isSubscribed: false,
+                city_ids: [],
+                subscription: null,
+                cityList: [],
+            }
+            let userCity = await userCitiesSchema.find({ user_id: user._id })
+            if (userCity.length > 0) {
+                data.isCityUpdated = true;
+                data.city_ids = userCity.map(item => item.city_id);
+                const cities = await citiesSchema.find({ id: { $in: data.city_ids } });
+                data.cityList = cities.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                }));
+            }
+            // Check if user already has an active subscription
+            // Find all subscriptions for the user and join with package info
+            // Find all subscriptions for the user and join with package info
+            const activeSubscription = await UserSubscribeSchema.find(
+                { user_id: user._id }
+            ).lean();
+
+            // For each subscription, join cities info based on city_ids
+            for (let sub of activeSubscription) {
+                if (sub.cityCount && sub.cityCount > 0) {
+                    // Find user's cities for this subscription
+                    const userCities = await userCitiesSchema.find({ user_id: user._id }).lean();
+                    const cityIds = userCities.map(item => item.city_id);
+                    const cities = await citiesSchema.find({ id: { $in: cityIds } }).lean();
+                    sub.cityList = cities.map(item => ({
+                        id: item.id,
+                        name: item.name,
+                    }));
+                } else {
+                    sub.cityList = [];
+                }
+            }
+            if (activeSubscription.length > 0) {
+                data.isSubscribed = true;
+                data.subscription = activeSubscription;
+            }
+
+            data.feedback = await FeedbackSchema.find(
+                { user_id: user._id }
+            ).lean();
+
+            return {
+                status: 1,
+                message: 'User successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'User not found or inactive.' }
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getUserActiveSubscribeServices = async (req, res) => {
+    try {
+        const { user_id } = req.query;
+        // Find all subscriptions for the user and join with package info
+        const activeSubscription = await UserSubscribeSchema.find(
+            { user_id: user_id }
+        ).lean();
+
+        // For each subscription, join cities info based on city_ids
+        for (let sub of activeSubscription) {
+            if (sub.cityCount && sub.cityCount > 0) {
+                // Find user's cities for this subscription
+                const userCities = await userCitiesSchema.find({ user_id: user_id }).lean();
+                const cityIds = userCities.map(item => item.city_id);
+                const cities = await citiesSchema.find({ id: { $in: cityIds } }).lean();
+                sub.cityList = cities.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                }));
+            } else {
+                sub.cityList = [];
+            }
+        }
+        if (activeSubscription.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: activeSubscription,
+            }
+        } else {
+            return { status: 0, message: 'No active subscriptions found.' }
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getUserFeedbackServices = async (req, res) => {
+    try {
+        const { user_id } = req.query;
+        // Find all subscriptions for the user and join with package info
+        // Get all feedback entries for the user and join with user info
+
+        const activeSubscription = await FeedbackSchema.find({ user_id: user_id, feedback_type: 'direct' })
+            .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+            .lean();
+
+        // For each feedback, get its replies (self-join where feedback_id === _id)
+        for (let feedback of activeSubscription) {
+            feedback.replies = await FeedbackSchema.find({ feedback_id: feedback._id, feedback_type: 'reply' })
+                .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+                .lean();
+        }
+        if (activeSubscription.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: activeSubscription,
+            }
+        } else {
+            return { status: 0, message: 'No feedback found.' }
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addFeedbackReplayServices = async (req) => {
+    try {
+        const { _id } = req.User;
+        let { description, feedback_id } = req.body
+        // Save feedback to the database
+        const feedbackEntry = new FeedbackSchema({
+            user_id: _id,
+            description: description,
+            feedback_type: 'reply', // Assuming replay feedback type
+            feedback_id: feedback_id
+        });
+        await feedbackEntry.save();
+        return { status: 1, message: 'Feedback submitted successfully.' };
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getFeedbackServices = async (req, res) => {
+    try {
+        const { limit, pageNo } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+        // Find all subscriptions for the user and join with package info
+        // Get all feedback entries for the user and join with user info
+
+        const activeSubscription = await FeedbackSchema.find({ feedback_type: 'direct' })
+            .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+
+            .lean();
+
+        // For each feedback, get its replies (self-join where feedback_id === _id)
+        for (let feedback of activeSubscription) {
+            feedback.replies = await FeedbackSchema.find({ feedback_id: feedback._id, feedback_type: 'reply' })
+                .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+                .lean();
+        }
+        if (activeSubscription.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: activeSubscription,
+            }
+        } else {
+            return { status: 0, message: 'No feedback found.' }
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getFeedbackInfoServices = async (req, res) => {
+    try {
+        const { feedback_id } = req.query;
+        // Find all subscriptions for the user and join with package info
+        // Get all feedback entries for the user and join with user info
+
+        const activeSubscription = await FeedbackSchema.find({ _id: feedback_id, feedback_type: 'direct' })
+            .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+            .lean();
+
+        // For each feedback, get its replies (self-join where feedback_id === _id)
+        for (let feedback of activeSubscription) {
+            feedback.replies = await FeedbackSchema.find({ feedback_id: feedback._id, feedback_type: 'reply' })
+                .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+                .lean();
+        }
+        if (activeSubscription.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: activeSubscription[0],
+            }
+        } else {
+            return { status: 0, message: 'No feedback found.' }
+        }
+
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }

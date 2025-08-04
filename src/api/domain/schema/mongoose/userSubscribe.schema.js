@@ -19,6 +19,10 @@ const UserSubscribeSchema = new Schema({
         type: Number,
         required: true
     },
+    city_ids: {
+        type: [Number],
+        required: false
+    },
     amount: {
         type: Number,
         required: true

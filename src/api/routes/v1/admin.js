@@ -3,7 +3,10 @@ const Validator = require('../../middlewares/validator'),
     Upload = require('../../middlewares/upload'),
     {
         loginController, stateController, citiesController, getProfileController,
-        updateUserController, addCouponController, addPackageController, getUserController
+        updateUserController, addCouponController, addPackageController, getUserController,
+        getCouponController, deleteCouponController, getUserInfoController,
+        getUserActiveSubscribeController, getUserFeedbackController, addFeedbackReplayController,
+        getFeedbackController, getFeedbackInfoController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -15,6 +18,56 @@ class AdminRoutes {
 
         /** login */
         this.app.post('/v1/admin/login', Validator('login'), loginController)
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/add-coupon',
+            verifyTokenAdmin,
+            Upload('coupon').single('couponLogo'),
+            Validator('addCouponAdmin'),
+            addCouponController
+        )
+
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-coupons',
+            verifyTokenAdmin,
+            getCouponController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/delete-coupon',
+            verifyTokenAdmin,
+            Validator('deleteCouponAdmin'),
+            deleteCouponController
+        )
+
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-user-info',
+            verifyTokenAdmin,
+            Validator('getUserProfile'),
+            getUserInfoController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-user-subscribes',
+            verifyTokenAdmin,
+            Validator('getUserProfile'),
+            getUserActiveSubscribeController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-user-feedback',
+            verifyTokenAdmin,
+            Validator('getUserProfile'),
+            getUserFeedbackController
+        )
 
         /** apis */
         this.app.get(
@@ -47,14 +100,6 @@ class AdminRoutes {
             updateUserController
         )
 
-        /** apis */
-        this.app.post(
-            '/v1/admin/add-coupon',
-            verifyTokenAdmin,
-            Upload('coupon').single('couponLogo'),
-            Validator('addCoupon'),
-            addCouponController
-        )
 
         /** apis */
         this.app.post(
@@ -70,6 +115,29 @@ class AdminRoutes {
             '/v1/admin/get-users',
             verifyTokenAdmin,
             getUserController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/add-feedback-replay',
+            verifyTokenAdmin,
+            Validator('addFeedbackReplay'),
+            addFeedbackReplayController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-all-feedback',
+            verifyTokenAdmin,
+            getFeedbackController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-feedback-info',
+            verifyTokenAdmin,
+            Validator('getFeedbackInfo'),
+            getFeedbackInfoController
         )
     }
     routesConfig() {

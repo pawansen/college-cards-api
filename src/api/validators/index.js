@@ -209,6 +209,22 @@ const addCoupon = Joi.object({
   couponLogo: Joi.string().allow('').optional(),
 })
 
+const addCouponAdmin = Joi.object({
+  title: Joi.string().required(),
+  // code: Joi.string().required(),
+  amount: Joi.number().required(),
+  description: Joi.string().allow('').optional(),
+  address: Joi.string().required(),
+  city_id: Joi.number().required(),
+  Authorization: Joi.string().allow('').optional(),
+  couponLogo: Joi.string().allow('').optional(),
+})
+
+const deleteCouponAdmin = Joi.object({
+  coupon_id: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
 const addFeedback = Joi.object({
   description: Joi.string().required(),
   Authorization: Joi.string().allow('').optional(),
@@ -227,9 +243,30 @@ const userSubscribe = Joi.object({
   Authorization: Joi.string().allow('').optional(),
 })
 
+const getUserProfile = Joi.object({
+  user_id: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const addFeedbackReplay = Joi.object({
+  feedback_id: Joi.string().required(),
+  description: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const getFeedbackInfo = Joi.object({
+  feedback_id: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
 module.exports = {
   addRole,
   updateCity,
+  addCouponAdmin,
+  addFeedbackReplay,
+  getUserProfile,
+  getFeedbackInfo,
+  deleteCouponAdmin,
   addPackage,
   userSubscribe,
   addCoupon,

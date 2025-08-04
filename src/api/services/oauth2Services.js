@@ -53,12 +53,6 @@ module.exports.getRefreshToken = async function (bearerToken) {
 
   if (!result) return false;
   if (new Date(result.refresh_token_expires_on) < new Date()) return false; // expired
-  console.log('getRefreshToken', {
-    refreshToken: result.refresh_token,
-    refreshTokenExpiresAt: new Date(result.refresh_token_expires_on),
-    client: { id: result.client_id },
-    user: JSON.parse(result.user),
-  });
   return {
     refreshToken: result.refresh_token,
     refreshTokenExpiresAt: new Date(result.refresh_token_expires_on),
