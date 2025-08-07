@@ -13,6 +13,7 @@ const bcrypt = require('bcrypt'),
     }),
     userSchema = require('../domain/schema/mongoose/user.schema'),
     OAuthTokenSchema = require('../domain/schema/mongoose/oauthTokens.schema'),
+    countriesSchema = require('../domain/schema/mongoose/country.schema'),
     stateSchema = require('../domain/schema/mongoose/state.schema'),
     citiesSchema = require('../domain/schema/mongoose/cities.schema'),
     userCitiesSchema = require('../domain/schema/mongoose/userCities.schema'),
@@ -1174,5 +1175,124 @@ exports.updateVersionServices = async (req) => {
         return { status: 1, message: 'Version updated successfully.' };
     } catch (err) {
         return err
+    }
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addUpdateCityServices = async (req) => {
+    try {
+        let { city, action } = req.body
+        // Save feedback to the database
+        // Always update the single version record (assume only one document exists)
+        await citiesSchema.updateOne(
+            { id: city }, // empty filter to match any document
+            { $set: { isDisplay: action === 'add' ? 'yes' : 'no' } }
+        );
+        return { status: 1, message: 'City updated successfully.' };
+    } catch (err) {
+        return err
+    }
+}
+
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getCountriesServices = async (req, res) => {
+    try {
+        const data = await countriesSchema.find();
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getStatesServices = async (req, res) => {
+    try {
+        const { country_id } = req.query;
+        // Fetch all cities from the database
+        console.log({ country_id: country_id })
+        const data = await stateSchema.find({ country_id: country_id });
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getCitiesServices = async (req, res) => {
+    try {
+        const { state_id } = req.query;
+        const data = await citiesSchema.find({ state_id: state_id });
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getUpdateCityServices = async (req, res) => {
+    try {
+
+        const data = await citiesSchema.find({ isDisplay: "yes" });
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
     }
 }

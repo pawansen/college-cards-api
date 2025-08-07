@@ -7,7 +7,12 @@ const Validator = require('../../middlewares/validator'),
         getCouponController, deleteCouponController, getUserInfoController,
         getUserActiveSubscribeController, getUserFeedbackController, addFeedbackReplayController,
         getFeedbackController, getFeedbackInfoController,
-        updateVersionController
+        updateVersionController,
+        addUpdateCityController,
+        getCountriesController,
+        getStatesController,
+        getCitiesController,
+        getUpdateCityController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -71,19 +76,12 @@ class AdminRoutes {
         )
 
         /** apis */
-        this.app.get(
-            '/v1/admin/states',
-            verifyTokenAdmin,
-            stateController
-        )
-
-        /** apis */
-        this.app.get(
-            '/v1/admin/cities',
-            verifyTokenAdmin,
-            // Validator('getCities'),
-            citiesController
-        )
+        // this.app.get(
+        //     '/v1/admin/cities',
+        //     verifyTokenAdmin,
+        //     // Validator('getCities'),
+        //     citiesController
+        // )
 
         /** apis */
         this.app.get(
@@ -147,6 +145,44 @@ class AdminRoutes {
             verifyTokenAdmin,
             Validator('updateVersion'),
             updateVersionController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/countries',
+            verifyTokenAdmin,
+            getCountriesController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/states',
+            verifyTokenAdmin,
+            getStatesController
+        )
+
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/cities',
+            verifyTokenAdmin,
+            getCitiesController
+        )
+
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/add-update-city',
+            verifyTokenAdmin,
+            Validator('addUpdateCity'),
+            addUpdateCityController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-update-cities',
+            verifyTokenAdmin,
+            getUpdateCityController
         )
     }
     routesConfig() {

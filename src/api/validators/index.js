@@ -276,10 +276,19 @@ const verifyOtp = Joi.object({
   password: Joi.string().required(),
 })
 
+
+const addUpdateCity = Joi.object({
+  action: Joi.string().valid('add', 'delete').required(),
+  city: Joi.number().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+
 module.exports = {
   addRole,
   updateCity,
   addCouponAdmin,
+  addUpdateCity,
   verifyOtp,
   addFeedbackReplay,
   updateVersion,

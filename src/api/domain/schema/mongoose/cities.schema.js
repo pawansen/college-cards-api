@@ -43,6 +43,12 @@ const CitySchema = new Schema({
         type: String,
         required: false
     },
+    isDisplay: {
+        type: String,
+        enum: ['yes', 'no'],
+        required: false,
+        default: 'no'
+    },
     wikiDataId: {
         type: String,
         required: false

@@ -17,7 +17,12 @@ const {
     addFeedbackReplayServices,
     getFeedbackServices,
     getFeedbackInfoServices,
-    updateVersionServices
+    updateVersionServices,
+    addUpdateCityServices,
+    getCountriesServices,
+    getStatesServices,
+    getCitiesServices,
+    getUpdateCityServices
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -376,6 +381,101 @@ exports.getFeedbackInfoController = (req, res) => {
  */
 exports.updateVersionController = (req, res) => {
     updateVersionServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getCountriesController = (req, res) => {
+    getCountriesServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getStatesController = (req, res) => {
+    getStatesServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getCitiesController = (req, res) => {
+    getCitiesServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addUpdateCityController = (req, res) => {
+    addUpdateCityServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getUpdateCityController = (req, res) => {
+    getUpdateCityServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)
