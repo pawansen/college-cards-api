@@ -21,6 +21,7 @@ const bcrypt = require('bcrypt'),
     packageSchema = require('../domain/schema/mongoose/package.schema'),
     UserSubscribeSchema = require('../domain/schema/mongoose/userSubscribe.schema'),
     UserPaymentsSchema = require('../domain/schema/mongoose/payment.schema'),
+    VersionSchema = require('../domain/schema/mongoose/version.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -1152,5 +1153,26 @@ exports.getFeedbackInfoServices = async (req, res) => {
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.updateVersionServices = async (req) => {
+    try {
+        let { androidVersion, isCompulsoryUpdate, iosVersion } = req.body
+        // Save feedback to the database
+        // Always update the single version record (assume only one document exists)
+        await VersionSchema.updateOne(
+            {}, // empty filter to match any document
+            { $set: { androidVersion, iosVersion, isCompulsoryUpdate } },
+            { upsert: true } // insert if not exists
+        );
+        return { status: 1, message: 'Version updated successfully.' };
+    } catch (err) {
+        return err
     }
 }

@@ -6,7 +6,8 @@ const Validator = require('../../middlewares/validator'),
         updateUserController, addCouponController, addPackageController, getUserController,
         getCouponController, deleteCouponController, getUserInfoController,
         getUserActiveSubscribeController, getUserFeedbackController, addFeedbackReplayController,
-        getFeedbackController, getFeedbackInfoController
+        getFeedbackController, getFeedbackInfoController,
+        updateVersionController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -138,6 +139,14 @@ class AdminRoutes {
             verifyTokenAdmin,
             Validator('getFeedbackInfo'),
             getFeedbackInfoController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/update-version',
+            verifyTokenAdmin,
+            Validator('updateVersion'),
+            updateVersionController
         )
     }
     routesConfig() {

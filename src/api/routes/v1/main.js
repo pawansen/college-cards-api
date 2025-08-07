@@ -5,7 +5,9 @@ const Validator = require('../../middlewares/validator'),
         loginController, registerController, stateController, citiesController, getProfileController,
         updateUserController, updateCityController, getCouponController, changePasswordController,
         logoutController, feedbackController, getPackageController, userSubscribeController, getUserSubscribeController,
-        getPaymentHistoryController, getRefreshTokenController, getReferralController, getNotificationController, getUserFeedbackController
+        getPaymentHistoryController, getRefreshTokenController, getReferralController, getNotificationController, getUserFeedbackController,
+        getVersionController,
+        forgotPasswordController, verifyOtpController, deleteAccountController
     } = require('../../controllers/v1/app/main/mainController')
 
 class MainRoutes {
@@ -148,6 +150,33 @@ class MainRoutes {
             '/v1/get-user-feedback',
             verifyToken,
             getUserFeedbackController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-version',
+            verifyToken,
+            getVersionController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/forgot-password',
+            Validator('forgotPassword'),
+            forgotPasswordController
+        )
+        /** apis */
+        this.app.post(
+            '/v1/verify-otp-change-password',
+            Validator('verifyOtp'),
+            verifyOtpController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/delete-account',
+            verifyToken,
+            deleteAccountController
         )
 
     }

@@ -59,6 +59,7 @@
     "dotenv": "^16.0.0",
     "express-validator": "^6.14.0",
     "fast-csv": "^5.0.1",
+    "firebase-admin": "^13.4.0",
     "get-current-line": "^7.4.0",
     "http-errors": "^2.0.0",
     "ip": "^1.1.8",

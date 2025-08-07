@@ -67,7 +67,7 @@ module.exports.getRefreshToken = async function (bearerToken) {
 
 module.exports.getUser = async function (email, password) {
   const user = await userSchema.findOne(
-    { email: email, isActive: true },
+    { email: email },
     {
       _id: 1,
       user_id: 1,
@@ -84,7 +84,7 @@ module.exports.getUser = async function (email, password) {
       createDate: 1,
       lastLoginAt: 1,
       deviceToken: 1,
-      password: 1, deviceType: 1, loginType: 1, isActive: 1, isEmailVerified: 1, isMobileVerified: 1
+      password: 1, deviceType: 1, loginType: 1, isActive: 1, isEmailVerified: 1, isMobileVerified: 1, isDelete: 1
     }
   ).lean();
   if (user) {

@@ -259,16 +259,36 @@ const getFeedbackInfo = Joi.object({
   Authorization: Joi.string().allow('').optional(),
 })
 
+const updateVersion = Joi.object({
+  androidVersion: Joi.number().required(),
+  iosVersion: Joi.number().required(),
+  isCompulsoryUpdate: Joi.string().valid('yes', 'no').required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const forgotPassword = Joi.object({
+  email: Joi.string().email().required(),
+})
+
+const verifyOtp = Joi.object({
+  email: Joi.string().email().required(),
+  otp: Joi.number().required(),
+  password: Joi.string().required(),
+})
+
 module.exports = {
   addRole,
   updateCity,
   addCouponAdmin,
+  verifyOtp,
   addFeedbackReplay,
+  updateVersion,
   getUserProfile,
   getFeedbackInfo,
   deleteCouponAdmin,
   addPackage,
   userSubscribe,
+  forgotPassword,
   addCoupon,
   addFeedback,
   updateUserProfile,

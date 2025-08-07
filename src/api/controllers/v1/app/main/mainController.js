@@ -18,7 +18,11 @@ const {
     getRefreshTokenServices,
     getReferralServices,
     getNotificationServices,
-    getUserFeedbackServices
+    getUserFeedbackServices,
+    getVersionServices,
+    forgotPasswordServices,
+    verifyOtpServices,
+    deleteAccountServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -396,6 +400,83 @@ exports.getReferralController = (req, res) => {
  */
 exports.getNotificationController = (req, res) => {
     getNotificationServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getVersionController = (req, res) => {
+    getVersionServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.forgotPasswordController = (req, res) => {
+    forgotPasswordServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.verifyOtpController = (req, res) => {
+    verifyOtpServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteAccountController = (req, res) => {
+    deleteAccountServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

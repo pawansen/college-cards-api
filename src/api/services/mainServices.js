@@ -22,6 +22,8 @@ const bcrypt = require('bcrypt'),
     UserSubscribeSchema = require('../domain/schema/mongoose/userSubscribe.schema'),
     UserPaymentsSchema = require('../domain/schema/mongoose/payment.schema'),
     notificationSchema = require('../domain/schema/mongoose/notification.schema'),
+    VersionSchema = require('../domain/schema/mongoose/version.schema'),
+    // Notification = require('../utils/notification'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -40,7 +42,20 @@ exports.loginServices = async (req, res) => {
         return oauth
             .token(request, response)
             .then(async function (token) {
-                if (token.user.isActive) {
+                if (!token.user.isDelete) {
+                    if (!token.user.isActive) {
+                        return { status: 0, message: 'Your Account is inActive, Please contact to administrator!' }
+                    }
+                    // return Notification.sendFCMNotification(
+                    //     token.user.deviceToken,
+                    //     "Subscribe",
+                    //     "YYour subscription has been activated",
+                    //     {
+                    //         event_id: null,
+                    //         user_id: null,
+                    //         event_type: "subscribe"
+                    //     }
+                    // );
                     let data = {
                         id: token.user._id,
                         user_id: token.user._id,
@@ -104,16 +119,16 @@ exports.loginServices = async (req, res) => {
                         data,
                     }
                 } else {
-                    return { status: 0, message: 'Your Account is inActive, Please contact to administrator!' }
+                    return { status: 0, message: 'Your Account is deleted!' }
                 }
             })
             .catch(function (err) {
-                console.log(err)
-                return { status: 0, message: 'User credentials are invalid.' }
+                console.log(err.message)
+                return { status: 0, message: err.message }
             })
     } catch (err) {
         console.log(err)
-        return { status: 0, message: err }
+        return { status: 0, message: err.message }
     }
 }
 
@@ -511,10 +526,15 @@ exports.getCouponServices = async (req, res) => {
             ).skip(offset).limit(limits);
 
             // Add base path to logo
-            data = data.map(item => ({
-                ...item.toObject(),
-                logo: item.logo ? env.UPLOAD_URL + item.logo : null
-            }));
+            data = data.map(async item => {
+                const cityInfo = await citiesSchema.findOne({ id: item.city_id });
+                return {
+                    ...item.toObject(),
+                    logo: item.logo ? env.UPLOAD_URL + item.logo : null,
+                    city: cityInfo ? { id: cityInfo.id, name: cityInfo.name } : null
+                };
+            });
+            data = await Promise.all(data);
         } else {
             data = await couponSchema.find(
                 query,
@@ -533,10 +553,16 @@ exports.getCouponServices = async (req, res) => {
                 }
             ).skip(offset).limit(limits);
             // Add base path to logo
-            data = data.map(item => ({
-                ...item.toObject(),
-                logo: item.logo ? env.UPLOAD_URL + item.logo : null
-            }));
+            // Add base path to logo
+            data = data.map(async item => {
+                const cityInfo = await citiesSchema.findOne({ id: item.city_id });
+                return {
+                    ...item.toObject(),
+                    logo: item.logo ? env.UPLOAD_URL + item.logo : null,
+                    city: cityInfo ? { id: cityInfo.id, name: cityInfo.name } : null
+                };
+            });
+            data = await Promise.all(data);
         }
         if (data.length > 0) {
             return {
@@ -1021,7 +1047,7 @@ exports.getNotificationServices = async (req, res) => {
 }
 
 /**
- * login.
+ * get.
  *
  * @returns {Object}
  */
@@ -1050,6 +1076,140 @@ exports.getUserFeedbackServices = async (req, res) => {
             }
         } else {
             return { status: 0, message: 'No feedback found.' }
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * get.
+ *
+ * @returns {Object}
+ */
+
+exports.getVersionServices = async (req, res) => {
+    try {
+        // Find all subscriptions for the user and join with package info
+        // Get all feedback entries for the user and join with user info
+        const version = await VersionSchema.find();
+        if (version.length) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: version[0],
+            }
+        } else {
+            return { status: 0, message: 'No version found.' }
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * get.
+ *
+ * @returns {Object}
+ */
+
+exports.forgotPasswordServices = async (req, res) => {
+    try {
+        const { email } = req.body;
+        // Check if user exists by email
+        const user = await userSchema.findOne({ email });
+        if (user) {
+            // Generate a 4-digit random OTP
+            //const otp = Math.floor(1000 + Math.random() * 9000);
+            const otp = 1234; // For testing purposes, use a fixed OTP
+            // Update the user document with the OTP
+            await userSchema.updateOne({ email }, { $set: { otp, otpExpireTime: Date.now() + 15 * 60 * 1000 } });
+            return {
+                status: 1,
+                message: 'OTP sent successfully.',
+                data: { email }
+            };
+        } else {
+            return { status: 0, message: 'User not found.' };
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * get.
+ *
+ * @returns {Object}
+ */
+
+exports.verifyOtpServices = async (req, res) => {
+    try {
+        const { email, otp, password } = req.body;
+        // Check if user exists by email
+        const user = await userSchema.findOne({ email, otp, otpExpireTime: { $gt: Date.now() } });
+        if (user) {
+            let salt = bcrypt.genSaltSync(saltRounds)
+            let hash = bcrypt.hashSync(password, salt)
+            let payload = {
+                password: hash,
+                auth_password: salt,
+                grant: password,
+                otp: null, // Clear OTP after successful verification
+                otpExpireTime: null // Clear OTP expiration time
+            }
+            const updateResult = await userSchema.updateOne(
+                { _id: user._id },
+                { $set: payload }
+            );
+            if (updateResult.modifiedCount > 0) {
+                // Delete all OAuth tokens for the current user after password change
+                await OAuthTokenSchema.deleteMany({ user_id: user._id });
+                return { status: 1, message: 'Password changed successfully.', data: { email } };
+            } else {
+                return { status: 0, message: 'Password not changed.' };
+            }
+        } else {
+            return { status: 0, message: 'User not found or OTP expired.' };
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * get.
+ *
+ * @returns {Object}
+ */
+
+exports.deleteAccountServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        // Check if user exists by email
+        const user = await userSchema.findOne({ _id });
+        if (user) {
+            const updateResult = await userSchema.updateOne(
+                { _id: user._id },
+                { $set: { isActive: false, isDelete: true, updatedDate: new Date() } } // Set isActive to false and add updatedDate timestamp
+            );
+            if (updateResult.modifiedCount > 0) {
+                // Delete all OAuth tokens for the current user after account deletion
+                await OAuthTokenSchema.deleteMany({ user_id: _id });
+                return { status: 1, message: 'Account deleted successfully.', data: { _id } };
+            } else {
+                return { status: 0, message: 'Account not deleted.' };
+            }
+        } else {
+            return { status: 0, message: 'User not found.' };
         }
 
     } catch (err) {
