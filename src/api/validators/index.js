@@ -283,12 +283,31 @@ const addUpdateCity = Joi.object({
   Authorization: Joi.string().allow('').optional(),
 })
 
+const addPromoCodeAdmin = Joi.object({
+  title: Joi.string().required(),
+  code: Joi.string().required(),
+  amount: Joi.number().required(),
+  maxUsagePerUser: Joi.number().required(),
+  totalUsageLimit: Joi.number().required(),
+  status: Joi.string().valid('active', 'inactive').required(),
+  validFrom: Joi.date().required(),
+  validTo: Joi.date().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const deletePromoCodeAdmin = Joi.object({
+  promo_id: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
 
 module.exports = {
   addRole,
   updateCity,
   addCouponAdmin,
+  addPromoCodeAdmin,
   addUpdateCity,
+  deletePromoCodeAdmin,
   verifyOtp,
   addFeedbackReplay,
   updateVersion,

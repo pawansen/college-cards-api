@@ -12,7 +12,11 @@ const Validator = require('../../middlewares/validator'),
         getCountriesController,
         getStatesController,
         getCitiesController,
-        getUpdateCityController
+        getUpdateCityController,
+        getNotificationController,
+        addPromoCodeController,
+        getPromoCodeController,
+        deletePromoCodeController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -24,6 +28,29 @@ class AdminRoutes {
 
         /** login */
         this.app.post('/v1/admin/login', Validator('login'), loginController)
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/add-promo-code',
+            verifyTokenAdmin,
+            Validator('addPromoCodeAdmin'),
+            addPromoCodeController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-promo-code',
+            verifyTokenAdmin,
+            getPromoCodeController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/delete-promo-code',
+            verifyTokenAdmin,
+            Validator('deletePromoCodeAdmin'),
+            deletePromoCodeController
+        )
 
         /** apis */
         this.app.post(
@@ -74,14 +101,6 @@ class AdminRoutes {
             Validator('getUserProfile'),
             getUserFeedbackController
         )
-
-        /** apis */
-        // this.app.get(
-        //     '/v1/admin/cities',
-        //     verifyTokenAdmin,
-        //     // Validator('getCities'),
-        //     citiesController
-        // )
 
         /** apis */
         this.app.get(
@@ -184,6 +203,16 @@ class AdminRoutes {
             verifyTokenAdmin,
             getUpdateCityController
         )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-notifications',
+            verifyTokenAdmin,
+            getNotificationController
+        )
+
+
+
     }
     routesConfig() {
         this.appAdminRoutes()

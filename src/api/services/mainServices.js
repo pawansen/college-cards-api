@@ -23,7 +23,7 @@ const bcrypt = require('bcrypt'),
     UserPaymentsSchema = require('../domain/schema/mongoose/payment.schema'),
     notificationSchema = require('../domain/schema/mongoose/notification.schema'),
     VersionSchema = require('../domain/schema/mongoose/version.schema'),
-    // Notification = require('../utils/notification'),
+    Notification = require('../utils/notification'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -46,16 +46,6 @@ exports.loginServices = async (req, res) => {
                     if (!token.user.isActive) {
                         return { status: 0, message: 'Your Account is inActive, Please contact to administrator!' }
                     }
-                    // return Notification.sendFCMNotification(
-                    //     token.user.deviceToken,
-                    //     "Subscribe",
-                    //     "YYour subscription has been activated",
-                    //     {
-                    //         event_id: null,
-                    //         user_id: null,
-                    //         event_type: "subscribe"
-                    //     }
-                    // );
                     let data = {
                         id: token.user._id,
                         user_id: token.user._id,
@@ -732,7 +722,7 @@ exports.getPackageServices = async (req, res) => {
  */
 exports.userSubscribeServices = async (req, res) => {
     try {
-        const { _id } = req.User;
+        const { _id, deviceToken } = req.User;
         const { package_id } = req.body;
         const existingPackage = await packageSchema.findOne(
             { _id: package_id },
@@ -765,17 +755,7 @@ exports.userSubscribeServices = async (req, res) => {
             } else if (existingPackage.packageType === 'monthly') {
                 endDate.setMonth(endDate.getMonth() + 1);
             }
-            console.log('End Date:', {
-                user_id: _id,
-                package_id: package_id,
-                cityCount: cityCount,
-                city_ids: userCityIds,
-                amount: billingAmount,
-                packageType: existingPackage.packageType,
-                startDate: new Date(),
-                endDate: endDate,
-                status: 'active'
-            });
+
             const subscribeInfo = await UserSubscribeSchema.create({
                 user_id: _id,
                 package_id: package_id,
@@ -813,6 +793,17 @@ exports.userSubscribeServices = async (req, res) => {
                     entity_id: subscribeInfo._id,
                     is_read: false,
                 });
+
+                await Notification.sendFCMNotification(
+                    deviceToken,
+                    "Subscription Successful",
+                    `You have successfully subscribed to the ${ existingPackage.title } package.`,
+                    {
+                        event_id: subscribeInfo._id,
+                        user_id: _id,
+                        event_type: "subscribe"
+                    }
+                );
             }
 
             return {

@@ -19,16 +19,20 @@ const sendFCMNotification = async (
     sendPushNotification(tokens, title, body, data);
 };
 
-
-
 const sendPushNotification = async (deviceToken, title, body, data = {}) => {
+    // Ensure all data values are strings
+    const stringifiedData = {};
+    Object.keys(data).forEach(key => {
+        stringifiedData[key] = String(data[key]);
+    });
+
     const message = {
         token: deviceToken,
         notification: {
             title: title,
             body: body,
         },
-        data: data, // Optional: Custom data payload
+        data: stringifiedData, // All values are now strings
         android: {
             priority: "high",
             notification: {

@@ -23,6 +23,8 @@ const bcrypt = require('bcrypt'),
     UserSubscribeSchema = require('../domain/schema/mongoose/userSubscribe.schema'),
     UserPaymentsSchema = require('../domain/schema/mongoose/payment.schema'),
     VersionSchema = require('../domain/schema/mongoose/version.schema'),
+    notificationSchema = require('../domain/schema/mongoose/notification.schema'),
+    PromoCodeSchema = require('../domain/schema/mongoose/promoCode.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -1294,5 +1296,167 @@ exports.getUpdateCityServices = async (req, res) => {
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getNotificationServices = async (req, res) => {
+    try {
+        const { limit, pageNo } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+        const data = await notificationSchema.find(
+            {},
+            {
+                _id: 0,
+                "notification_id": "$_id",
+                title: 1,
+                message: 1,
+                type: 1,
+                entity_id: 1,
+                is_read: 1,
+                create_at: 1
+            }
+        ).sort({ create_at: -1 }).skip(offset).limit(limits);
+
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addPromoCodeServices = async (req) => {
+    try {
+        let { body } = req;
+        // Only use the specified fields for insert/update
+        let payload = {
+            title: body.title,
+            code: body.code,
+            amount: body.amount,
+            maxUsagePerUser: body.maxUsagePerUser,
+            totalUsageLimit: body.totalUsageLimit,
+            status: body.status,
+            validFrom: body.validFrom,
+            validTo: body.validTo
+        };
+        // Check if promo code with code and city_id already exists
+        const existingPromo = await PromoCodeSchema.findOne({
+            code: body.code
+        });
+
+        if (!existingPromo) {
+            // Create new promo code
+            const newPromo = new PromoCodeSchema(payload);
+            const savedPromo = await newPromo.save();
+            return { status: 1, message: 'Successfully added', data: { ...savedPromo.toObject(), id: savedPromo._id } };
+        } else {
+            // Update existing promo code
+            await PromoCodeSchema.updateOne({ _id: existingPromo._id }, { $set: payload });
+            return { status: 1, message: 'Successfully updated', data: { ...existingPromo.toObject(), ...payload, id: existingPromo._id } };
+        }
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getPromoCodeServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const { city_id, keyward, limit, pageNo } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+        // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
+        let query = {};
+        if (city_id) {
+            query.city_id = city_id;
+        }
+        if (keyward) {
+            query.$or = [
+                { title: { $regex: keyward, $options: 'i' } },
+                { code: { $regex: keyward, $options: 'i' } }
+            ];
+        }
+        let data = await PromoCodeSchema.find(
+            query,
+            {
+                _id: 0,
+                "promo_id": "$_id",
+                title: 1,
+                code: 1,
+                amount: 1,
+                amountType: 1,
+                maxUsagePerUser: 1,
+                totalUsageLimit: 1,
+                status: 1,
+                validFrom: 1,
+                validTo: 1,
+                create_at: 1
+            }
+        ).skip(offset).limit(limits);
+        // Add base path to logo
+        data = data.map(item => ({
+            ...item.toObject(),
+            logo: item.logo ? env.UPLOAD_URL + item.logo : null
+        }));
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deletePromoCodeServices = async (req) => {
+    try {
+        let { body } = req;
+        // Delete promo code by code and city_id
+        const deletedPromo = await PromoCodeSchema.findOneAndDelete({
+            _id: body.promo_id,
+        });
+
+        if (deletedPromo) {
+            return { status: 1, message: 'Promo code deleted successfully.' };
+        } else {
+            return { status: 0, message: 'Promo code not found.' };
+        }
+    } catch (err) {
+        return err
     }
 }

@@ -22,7 +22,11 @@ const {
     getCountriesServices,
     getStatesServices,
     getCitiesServices,
-    getUpdateCityServices
+    getUpdateCityServices,
+    getNotificationServices,
+    addPromoCodeServices,
+    getPromoCodeServices,
+    deletePromoCodeServices
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -476,6 +480,84 @@ exports.addUpdateCityController = (req, res) => {
  */
 exports.getUpdateCityController = (req, res) => {
     getUpdateCityServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getNotificationController = (req, res) => {
+    getNotificationServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addPromoCodeController = (req, res) => {
+    addPromoCodeServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getPromoCodeController = (req, res) => {
+    getPromoCodeServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deletePromoCodeController = (req, res) => {
+    deletePromoCodeServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)
