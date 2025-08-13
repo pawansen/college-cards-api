@@ -22,7 +22,10 @@ const {
     getVersionServices,
     forgotPasswordServices,
     verifyOtpServices,
-    deleteAccountServices
+    deleteAccountServices,
+    getContentServices,
+    getValidateInfoServices,
+    cancelMembershipServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -477,6 +480,63 @@ exports.verifyOtpController = (req, res) => {
  */
 exports.deleteAccountController = (req, res) => {
     deleteAccountServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getContentController = (req, res) => {
+    getContentServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getValidateInfoController = (req, res) => {
+    getValidateInfoServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.cancelMembershipController = (req, res) => {
+    cancelMembershipServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

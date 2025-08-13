@@ -8,7 +8,7 @@ const bcrypt = require('bcrypt'),
         model: require('./oauth2Services'),
         allowBearerTokensInQueryString: true,
         // accessTokenLifetime: env.OAUTH_TOKEN_EXPIRE,
-        accessTokenLifetime: 60 * 5, // 5 mins
+        accessTokenLifetime: 60 * 60 * 24 * 15, // 15 days
         refreshTokenLifetime: 60 * 60 * 24 * 30, // 30 days
     }),
     userSchema = require('../domain/schema/mongoose/user.schema'),
@@ -24,6 +24,7 @@ const bcrypt = require('bcrypt'),
     notificationSchema = require('../domain/schema/mongoose/notification.schema'),
     VersionSchema = require('../domain/schema/mongoose/version.schema'),
     Notification = require('../utils/notification'),
+    contentSchema = require('../domain/schema/mongoose/content.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -482,6 +483,11 @@ exports.getCouponServices = async (req, res) => {
         const { city_id, limit, pageNo } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+
+        const subscribe = await UserSubscribeSchema.findOne({ user_id: _id, status: { $in: ['active', 'cancelledUsedFullMonth'] }, endDate: { $gte: new Date() } });
+        if (!subscribe) {
+            return { status: 0, message: 'User not subscribed or subscription expired.' }
+        }
         // Fetch all cities from the database
         const userCities = await userCitiesSchema.find({ user_id: _id });
         // If userCities found, extract city_id into a new array
@@ -733,7 +739,7 @@ exports.userSubscribeServices = async (req, res) => {
             // Check if user already has an active subscription
             const activeSubscription = await UserSubscribeSchema.findOne({
                 user_id: _id,
-                status: 'active',
+                status: { $in: ['active', 'cancelledUsedFullMonth'] },
                 endDate: { $gte: new Date() }
             });
             if (activeSubscription) {
@@ -1201,6 +1207,148 @@ exports.deleteAccountServices = async (req, res) => {
             }
         } else {
             return { status: 0, message: 'User not found.' };
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * get.
+ *
+ * @returns {Object}
+ */
+
+exports.getContentServices = async (req, res) => {
+    try {
+        const { type } = req.query;
+        // Check if user exists by email
+        const content = await contentSchema.findOne({ type });
+        if (content) {
+            return {
+                status: 1,
+                message: 'Content retrieved successfully.',
+                data: content
+            };
+        } else {
+            return { status: 0, message: 'Content not found.' };
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getValidateInfoServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const user = await userSchema.findOne(
+            { _id: _id, isActive: true },
+        ).lean();
+        if (user) {
+            const token = await OAuthTokenSchema.findOne(
+                { user_id: user._id },
+            ).lean();
+            let data = {
+                id: user._id,
+                user_id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                mobile: user.mobile,
+                role: user.role,
+                token: token.access_token,
+                refreshToken: token.refresh_token,
+                referralCode: user.referralCode,
+                profileImage: env.UPLOAD_URL + user.profileImage,
+                deviceId: user.deviceId,
+                isCityUpdated: false,
+                isSubscribed: false,
+                city_ids: [],
+                subscription: null,
+                cityList: [],
+            }
+            let userCity = await userCitiesSchema.find({ user_id: user._id })
+            if (userCity.length > 0) {
+                data.isCityUpdated = true;
+                data.city_ids = userCity.map(item => item.city_id);
+                const cities = await citiesSchema.find({ id: { $in: data.city_ids } });
+                data.cityList = cities.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                }));
+            }
+            // Check if user already has an active subscription
+            const activeSubscription = await UserSubscribeSchema.findOne({
+                user_id: user._id,
+                status: 'active',
+                endDate: { $gte: new Date() }
+            });
+            if (activeSubscription) {
+                data.isSubscribed = true;
+                data.subscription = {
+                    package_id: activeSubscription.package_id,
+                    cityCount: activeSubscription.cityCount,
+                    amount: activeSubscription.amount,
+                    packageType: activeSubscription.packageType,
+                    startDate: activeSubscription.startDate,
+                    endDate: activeSubscription.endDate,
+                    status: activeSubscription.status
+                };
+            }
+            return {
+                status: 1,
+                message: 'User successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'User not found or inactive.' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * get.
+ *
+ * @returns {Object}
+ */
+
+exports.cancelMembershipServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const user = await UserSubscribeSchema.findOne({ user_id: _id, status: "active", endDate: { $gte: new Date() } });
+        if (user) {
+            let status = "cancelled";
+            // Check if the difference between startDate and today is 15 days or more
+            const startDate = new Date(user.startDate);
+            const today = new Date();
+            const diffTime = today.getTime() - startDate.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays >= 15) {
+                status = "cancelledUsedFullMonth";
+            }
+            const updateResult = await UserSubscribeSchema.updateOne(
+                { user_id: _id, status: "active", endDate: { $gte: new Date() } },
+                { $set: { status: status, updatedDate: new Date() } } // Set isActive to false and add updatedDate timestamp
+            );
+            if (updateResult.modifiedCount > 0) {
+                return { status: 1, message: 'Membership cancelled successfully.', data: { id: _id } };
+            } else {
+                return { status: 0, message: 'Membership not found.' };
+            }
+        } else {
+            return { status: 0, message: 'Membership not found.' };
         }
 
     } catch (err) {

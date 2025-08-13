@@ -20,7 +20,7 @@ module.exports.getClient = async function (clientId, clientSecret) {
  */
 module.exports.saveToken = async function (token, client, user) {
   let payload = {
-    user_id: user.id,
+    user_id: user._id,
     client_id: client.clientId,
     access_token: token.accessToken,
     refresh_token: token.refreshToken,
@@ -28,7 +28,7 @@ module.exports.saveToken = async function (token, client, user) {
     refresh_token_expires_on: token.refreshTokenExpiresAt,
     user: JSON.stringify(user),
   }
-  await OAuthTokenSchema.deleteMany({ user_id: user.id })
+  await OAuthTokenSchema.deleteMany({ user_id: user._id })
   const insert = await OAuthTokenSchema.create(payload);
   return {
     ...user.dataValues,

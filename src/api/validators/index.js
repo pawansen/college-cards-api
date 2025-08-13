@@ -182,13 +182,6 @@ const updateUserProfile = Joi.object({
     .max(10)
     .message('Mobile max length is 10')
     .required(),
-  // email: Joi.string()
-  //   .email({ tlds: { allow: false } })
-  //   .required()
-  //   .messages({
-  //     'string.email': 'Email must be a valid email address',
-  //     'any.required': 'Email is required'
-  //   }),
   profileImage: Joi.string().allow('').optional(),
 })
 
@@ -300,6 +293,16 @@ const deletePromoCodeAdmin = Joi.object({
   Authorization: Joi.string().allow('').optional(),
 })
 
+const addContent = Joi.object({
+  content: Joi.string().required(),
+  type: Joi.string().valid('privacy', 'terms', 'about').required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const getContent = Joi.object({
+  type: Joi.string().valid('privacy', 'terms', 'about').required(),
+  Authorization: Joi.string().allow('').optional(),
+})
 
 module.exports = {
   addRole,
@@ -310,6 +313,8 @@ module.exports = {
   deletePromoCodeAdmin,
   verifyOtp,
   addFeedbackReplay,
+  addContent,
+  getContent,
   updateVersion,
   getUserProfile,
   getFeedbackInfo,

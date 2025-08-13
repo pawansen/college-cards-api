@@ -32,6 +32,12 @@ const UserSubscribeSchema = new Schema({
         enum: ['monthly', 'yearly'],
         required: true
     },
+    isAutoRenew: {
+        type: String,
+        enum: ['yes', 'no'],
+        required: true,
+        default: 'yes'
+    },
     startDate: {
         type: Date,
         required: true
@@ -42,13 +48,18 @@ const UserSubscribeSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'inactive', 'cancelled', 'expired'],
-        required: true
+        enum: ['active', 'inactive', 'cancelled', 'expired', 'cancelledUsedFullMonth'],
+        required: true,
+        default: 'active'
     },
     createdAt: {
         type: Date,
         default: Date.now,
         required: true
+    },
+    updatedDate: {
+        type: Date,
+        required: false
     }
 }, {
     timestamps: false

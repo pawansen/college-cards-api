@@ -25,6 +25,7 @@ const bcrypt = require('bcrypt'),
     VersionSchema = require('../domain/schema/mongoose/version.schema'),
     notificationSchema = require('../domain/schema/mongoose/notification.schema'),
     PromoCodeSchema = require('../domain/schema/mongoose/promoCode.schema'),
+    contentSchema = require('../domain/schema/mongoose/content.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -1455,6 +1456,38 @@ exports.deletePromoCodeServices = async (req) => {
             return { status: 1, message: 'Promo code deleted successfully.' };
         } else {
             return { status: 0, message: 'Promo code not found.' };
+        }
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addContentServices = async (req) => {
+    try {
+        let { type, content } = req.body;
+        // Only use the specified fields for insert/update
+        let payload = {
+            content: content,
+            type: type,
+        };
+        // Check if content with type already exists
+        const contentResponse = await contentSchema.findOne({
+            type: type
+        });
+        if (!contentResponse) {
+            // Create new content
+            const newContent = new contentSchema(payload);
+            const savedContent = await newContent.save();
+            return { status: 1, message: 'Successfully added', data: { ...savedContent.toObject(), id: savedContent._id } };
+        } else {
+            // Update existing content
+            await contentSchema.updateOne({ _id: contentResponse._id }, { $set: payload });
+            return { status: 1, message: 'Successfully updated', data: { ...contentResponse.toObject(), ...payload, id: contentResponse._id } };
         }
     } catch (err) {
         return err

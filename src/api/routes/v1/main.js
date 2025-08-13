@@ -7,7 +7,8 @@ const Validator = require('../../middlewares/validator'),
         logoutController, feedbackController, getPackageController, userSubscribeController, getUserSubscribeController,
         getPaymentHistoryController, getRefreshTokenController, getReferralController, getNotificationController, getUserFeedbackController,
         getVersionController,
-        forgotPasswordController, verifyOtpController, deleteAccountController
+        forgotPasswordController, verifyOtpController, deleteAccountController, getContentController, getValidateInfoController,
+        cancelMembershipController
     } = require('../../controllers/v1/app/main/mainController')
 
 class MainRoutes {
@@ -177,6 +178,23 @@ class MainRoutes {
             '/v1/delete-account',
             verifyToken,
             deleteAccountController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-content',
+            Validator('getContent'),
+            getContentController
+        )
+
+        /** login */
+        this.app.get('/v1/get-validate-info', verifyToken, getValidateInfoController)
+
+        /** apis */
+        this.app.post(
+            '/v1/cancel-membership',
+            verifyToken,
+            cancelMembershipController
         )
 
     }
