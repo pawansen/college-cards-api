@@ -27,7 +27,8 @@ const {
     addPromoCodeServices,
     getPromoCodeServices,
     deletePromoCodeServices,
-    addContentServices
+    addContentServices,
+    getDashboardServices
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -578,6 +579,25 @@ exports.deletePromoCodeController = (req, res) => {
  */
 exports.addContentController = (req, res) => {
     addContentServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getDashboardController = (req, res) => {
+    getDashboardServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

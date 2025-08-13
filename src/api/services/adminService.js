@@ -1493,3 +1493,52 @@ exports.addContentServices = async (req) => {
         return err
     }
 }
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getDashboardServices = async (req) => {
+    try {
+        let { type, content } = req.body;
+        // Only use the specified fields for insert/update
+        let payload = {
+            content: content,
+            type: type,
+        };
+        let data = {};
+        // Get total users (excluding admin)
+        const totalUsers = await userSchema.countDocuments({ role: { $ne: 'admin' } });
+        // Get total coupons
+        const totalCoupons = await couponSchema.countDocuments({});
+        // Get total packages
+        const totalPackages = await packageSchema.countDocuments({});
+        // Get total subscriptions
+        const totalSubscriptions = await UserSubscribeSchema.countDocuments({});
+        // Calculate the sum of all payment amounts
+        const totalAmountResult = await UserPaymentsSchema.aggregate([
+            { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+        ]);
+        const totalAmount = totalAmountResult.length > 0 ? totalAmountResult[0].totalAmount : 0;
+        // Get total promo codes
+        const totalPromoCodes = await PromoCodeSchema.countDocuments({});
+        // Get total cities
+        const totalCities = await citiesSchema.countDocuments({ isDisplay: "yes" });
+
+        data = {
+            totalUsers,
+            totalCoupons,
+            totalPackages,
+            totalSubscriptions,
+            totalAmount,
+            totalPromoCodes,
+            totalCities,
+        };
+
+        return { status: 1, message: 'Successfully updated', data: data };
+
+    } catch (err) {
+        return err
+    }
+}
