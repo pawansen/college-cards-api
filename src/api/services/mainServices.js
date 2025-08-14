@@ -214,7 +214,8 @@ exports.registerServices = async (req, res) => {
                         isCityUpdated: false,
                         isSubscribed: false,
                         city_ids: [],
-                        subscription: null
+                        subscription: null,
+                        cityList: []
                     };
                     return {
                         status: 1, message: 'Successfully added', data: data
