@@ -37,6 +37,10 @@ const CouponSchema = new Schema({
         type: String,
         required: false
     },
+    status: {
+        type: Boolean,
+        default: true,
+    },
     create_at: {
         type: Date,
         default: Date.now,

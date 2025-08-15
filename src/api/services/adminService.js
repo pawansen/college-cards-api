@@ -471,9 +471,18 @@ exports.getCouponServices = async (req, res) => {
             }
         ).skip(offset).limit(limits);
         // Add base path to logo
-        data = data.map(item => ({
-            ...item.toObject(),
-            logo: item.logo ? env.UPLOAD_URL + item.logo : null
+        // Add base path to logo and get city info
+        data = await Promise.all(data.map(async item => {
+            const obj = item.toObject();
+            obj.logo = obj.logo ? env.UPLOAD_URL + obj.logo : null;
+            // Attach city info if city_id exists
+            if (obj.city_id) {
+                const city = await citiesSchema.findOne({ id: obj.city_id }, { id: 1, name: 1 });
+                obj.city = city ? { id: city.id, name: city.name } : null;
+            } else {
+                obj.city = null;
+            }
+            return obj;
         }));
         if (data.length > 0) {
             return {
@@ -1526,6 +1535,8 @@ exports.getDashboardServices = async (req) => {
         // Get total cities
         const totalCities = await citiesSchema.countDocuments({ isDisplay: "yes" });
 
+        const totalFeedbacks = await FeedbackSchema.countDocuments({});
+
         data = {
             totalUsers,
             totalCoupons,
@@ -1534,6 +1545,7 @@ exports.getDashboardServices = async (req) => {
             totalAmount,
             totalPromoCodes,
             totalCities,
+            totalFeedbacks
         };
 
         return { status: 1, message: 'Successfully updated', data: data };
