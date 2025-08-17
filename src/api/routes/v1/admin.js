@@ -4,7 +4,7 @@ const Validator = require('../../middlewares/validator'),
     {
         loginController, stateController, citiesController, getProfileController,
         updateUserController, addCouponController, addPackageController, getUserController,
-        getCouponController, deleteCouponController, getUserInfoController,
+        getCouponController, getCouponInfoController, deleteCouponController, getUserInfoController,
         getUserActiveSubscribeController, getUserFeedbackController, addFeedbackReplayController,
         getFeedbackController, getFeedbackInfoController,
         updateVersionController,
@@ -18,7 +18,8 @@ const Validator = require('../../middlewares/validator'),
         getPromoCodeController,
         deletePromoCodeController,
         addContentController,
-        getDashboardController
+        getDashboardController,
+        userStatusUpdateController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -69,6 +70,13 @@ class AdminRoutes {
             '/v1/admin/get-coupons',
             verifyTokenAdmin,
             getCouponController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-coupon-info',
+            verifyTokenAdmin,
+            getCouponInfoController
         )
 
         /** apis */
@@ -226,6 +234,14 @@ class AdminRoutes {
             '/v1/admin/get-dashboard',
             verifyTokenAdmin,
             getDashboardController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/update-user-status',
+            verifyTokenAdmin,
+            Validator('userStatusUpdate'),
+            userStatusUpdateController
         )
 
     }

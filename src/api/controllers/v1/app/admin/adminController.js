@@ -10,6 +10,7 @@ const {
     addPackageServices,
     getUserServices,
     getCouponServices,
+    getCouponInfoServices,
     deleteCouponServices,
     getUserInfoServices,
     getUserActiveSubscribeServices,
@@ -28,7 +29,9 @@ const {
     getPromoCodeServices,
     deletePromoCodeServices,
     addContentServices,
-    getDashboardServices
+    getDashboardServices,
+    updateCouponServices,
+    userStatusUpdateService
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -175,17 +178,31 @@ exports.updateCityController = (req, res) => {
  * @returns {Object}
  */
 exports.addCouponController = (req, res) => {
-    addCouponServices(req)
-        .then((response) => {
-            if (response.status) {
-                SuccessResponse(res, response.message, response.data)
-            } else {
-                ErrorResponse(res, response.message)
-            }
-        })
-        .catch((err) => {
-            ErrorResponse(res, err.message)
-        })
+    if (req.body.coupon_id) {
+        updateCouponServices(req)
+            .then((response) => {
+                if (response.status) {
+                    SuccessResponse(res, response.message, response.data)
+                } else {
+                    ErrorResponse(res, response.message)
+                }
+            })
+            .catch((err) => {
+                ErrorResponse(res, err.message)
+            })
+    } else {
+        addCouponServices(req)
+            .then((response) => {
+                if (response.status) {
+                    SuccessResponse(res, response.message, response.data)
+                } else {
+                    ErrorResponse(res, response.message)
+                }
+            })
+            .catch((err) => {
+                ErrorResponse(res, err.message)
+            })
+    }
 }
 
 /**
@@ -233,6 +250,25 @@ exports.getUserController = (req, res) => {
  */
 exports.getCouponController = (req, res) => {
     getCouponServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getCouponInfoController = (req, res) => {
+    getCouponInfoServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)
@@ -598,6 +634,26 @@ exports.addContentController = (req, res) => {
  */
 exports.getDashboardController = (req, res) => {
     getDashboardServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.userStatusUpdateController = (req, res) => {
+    userStatusUpdateService(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

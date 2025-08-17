@@ -211,10 +211,18 @@ const addCouponAdmin = Joi.object({
   city_id: Joi.number().required(),
   Authorization: Joi.string().allow('').optional(),
   couponLogo: Joi.string().allow('').optional(),
+  coupon_id: Joi.string().allow('').optional(),
 })
 
 const deleteCouponAdmin = Joi.object({
   coupon_id: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const userStatusUpdate = Joi.object({
+  user_id: Joi.string().required(),
+  status: Joi.string().valid('yes', 'no').optional(),
+  delete: Joi.string().valid('yes', 'no').optional(),
   Authorization: Joi.string().allow('').optional(),
 })
 
@@ -316,6 +324,7 @@ module.exports = {
   addContent,
   getContent,
   updateVersion,
+  userStatusUpdate,
   getUserProfile,
   getFeedbackInfo,
   deleteCouponAdmin,

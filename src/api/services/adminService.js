@@ -440,7 +440,7 @@ exports.addCouponServices = async (req) => {
 exports.getCouponServices = async (req, res) => {
     try {
         const { _id } = req.User;
-        const { city_id, keyward, limit, pageNo } = req.query;
+        const { city_id, keyword, limit, pageNo } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
         // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
@@ -448,10 +448,10 @@ exports.getCouponServices = async (req, res) => {
         if (city_id) {
             query.city_id = city_id;
         }
-        if (keyward) {
+        if (keyword) {
             query.$or = [
-                { title: { $regex: keyward, $options: 'i' } },
-                { code: { $regex: keyward, $options: 'i' } }
+                { title: { $regex: keyword, $options: 'i' } },
+                { amount: { $regex: keyword, $options: 'i' } }
             ];
         }
         let data = await couponSchema.find(
@@ -500,6 +500,66 @@ exports.getCouponServices = async (req, res) => {
 }
 
 /**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getCouponInfoServices = async (req, res) => {
+    try {
+        const { coupon_id } = req.query;
+        let query = {};
+        if (!coupon_id) {
+            return { status: 0, message: 'Coupon ID is required' };
+        }
+        if (coupon_id) {
+            query._id = coupon_id;
+        }
+        let data = await couponSchema.find(
+            query,
+            {
+                _id: 0,
+                "coupon_id": "$_id",
+                title: 1,
+                code: 1,
+                amount: 1,
+                amountType: 1,
+                description: 1,
+                city_id: 1,
+                address: 1,
+                logo: 1,
+                create_at: 1
+            }
+        );
+        // Add base path to logo
+        // Add base path to logo and get city info
+        data = await Promise.all(data.map(async item => {
+            const obj = item.toObject();
+            obj.logo = obj.logo ? env.UPLOAD_URL + obj.logo : null;
+            // Attach city info if city_id exists
+            if (obj.city_id) {
+                const city = await citiesSchema.findOne({ id: obj.city_id }, { id: 1, name: 1 });
+                obj.city = city ? { id: city.id, name: city.name } : null;
+            } else {
+                obj.city = null;
+            }
+            return obj;
+        }));
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: data[0],
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
  * add user.
  *
  * @returns {Object}
@@ -508,9 +568,27 @@ exports.deleteCouponServices = async (req) => {
     try {
         let { body } = req;
         // Delete coupon by code and city_id
-        const deletedCoupon = await couponSchema.findOneAndDelete({
-            _id: body.coupon_id,
-        });
+        let deletedCoupon;
+        let couponIds = [];
+        if (typeof body.coupon_id === 'string') {
+            couponIds = body.coupon_id.split(',').map(id => id.trim()).filter(Boolean);
+        } else if (Array.isArray(body.coupon_id)) {
+            couponIds = body.coupon_id;
+        } else if (body.coupon_id) {
+            couponIds = [body.coupon_id];
+        }
+
+        if (couponIds.length > 1) {
+            deletedCoupon = await couponSchema.deleteMany({
+                _id: { $in: couponIds },
+            });
+        } else if (couponIds.length === 1) {
+            deletedCoupon = await couponSchema.findOneAndDelete({
+                _id: couponIds[0],
+            });
+        } else {
+            deletedCoupon = null;
+        }
 
         if (deletedCoupon) {
             return { status: 1, message: 'Coupon deleted successfully.' };
@@ -893,7 +971,7 @@ exports.getUserServices = async (req, res) => {
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
         const data = await userSchema.find(
-            { role: { $ne: 'admin' } }
+            { role: { $ne: 'admin' }, isDelete: false }
         ).sort({ createDate: -1 }).skip(offset).limit(limits);
 
         if (data.length > 0) {
@@ -930,6 +1008,7 @@ exports.getUserInfoServices = async (req, res) => {
                 city_ids: [],
                 subscription: null,
                 cityList: [],
+                profileImage: user.profileImage ? env.UPLOAD_URL + user.profileImage : null,
             }
             let userCity = await userCitiesSchema.find({ user_id: user._id })
             if (userCity.length > 0) {
@@ -968,9 +1047,25 @@ exports.getUserInfoServices = async (req, res) => {
                 data.subscription = activeSubscription;
             }
 
+            // Add feedback with profileImage including host path
             data.feedback = await FeedbackSchema.find(
                 { user_id: user._id }
-            ).lean();
+            )
+                .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
+                .lean();
+
+            // Add host path to profileImage in feedback
+            if (data.feedback && data.feedback.length > 0) {
+                data.feedback = data.feedback.map(fb => {
+                    if (fb.user_id && fb.user_id.profileImage) {
+                        // Only add env.UPLOAD_URL if not already present
+                        if (!fb.user_id.profileImage.startsWith(env.UPLOAD_URL)) {
+                            fb.user_id.profileImage = env.UPLOAD_URL + fb.user_id.profileImage;
+                        }
+                    }
+                    return fb;
+                });
+            }
 
             return {
                 status: 1,
@@ -1244,7 +1339,6 @@ exports.getStatesServices = async (req, res) => {
     try {
         const { country_id } = req.query;
         // Fetch all cities from the database
-        console.log({ country_id: country_id })
         const data = await stateSchema.find({ country_id: country_id });
         if (data.length > 0) {
             return {
@@ -1293,7 +1387,15 @@ exports.getCitiesServices = async (req, res) => {
 exports.getUpdateCityServices = async (req, res) => {
     try {
 
-        const data = await citiesSchema.find({ isDisplay: "yes" });
+        const { limit, pageNo } = req.query;
+        let data = [];
+        if (limit && pageNo) {
+            const limits = limit ? parseInt(limit) : 10
+            const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0;
+            data = await citiesSchema.find({ isDisplay: "yes" }).skip(offset).limit(limits);
+        } else {
+            data = await citiesSchema.find({ isDisplay: "yes" });
+        }
         if (data.length > 0) {
             return {
                 status: 1,
@@ -1549,6 +1651,80 @@ exports.getDashboardServices = async (req) => {
         };
 
         return { status: 1, message: 'Successfully updated', data: data };
+
+    } catch (err) {
+        return err
+    }
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.updateCouponServices = async (req) => {
+    try {
+        let { body, file } = req;
+        const address = body.address ? JSON.parse(body.address) : [];
+        // Generate a random code: 3 letters + 3 digits
+        function generateRandomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const letters = Array.from({ length: 3 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+            const numbers = Math.floor(100 + Math.random() * 900); // 3 digits
+            return letters + numbers;
+        }
+
+        let payload = {
+            title: body.title,
+            amount: body.amount,
+            amountType: "percentage",
+            city_id: body.city_id,
+            address: Array.isArray(address) && address.length > 0
+                ? address.map(item => ({
+                    address: item.address || ''
+                }))
+                : [],
+        }
+        if (file) {
+            // If a new file is uploaded, set the logo path
+            payload.logo = "/uploads/coupon/" + file.filename;
+        }
+        // Check if user with email or mobile already exists
+        // Update the coupon by _id
+        await couponSchema.updateOne(
+            { _id: body.coupon_id },
+            { $set: payload }
+        );
+        return { status: 1, message: 'Coupon updated successfully.' };
+    } catch (err) {
+        return err
+    }
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.userStatusUpdateService = async (req) => {
+    try {
+        let { body } = req;
+        let payload = {}
+
+        if (body.status) {
+            payload.isActive = body.status === 'yes' ? true : false
+        }
+        if (body.delete) {
+            payload.isDelete = body.delete === 'yes' ? true : false
+        }
+        // Update the existing package
+        await userSchema.updateOne(
+            { _id: body.user_id },
+            { $set: payload }
+        );
+        return { status: 1, message: 'User updated successfully.' };
 
     } catch (err) {
         return err
