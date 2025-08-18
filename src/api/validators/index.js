@@ -193,7 +193,7 @@ const updateCity = Joi.object({
 const addCoupon = Joi.object({
   title: Joi.string().required(),
   code: Joi.string().required(),
-  amount: Joi.number().required(),
+  amount: Joi.string().required(),
   amountType: Joi.string().valid('percentage', 'fixed').required(),
   description: Joi.string().allow('').optional(),
   address: Joi.string().required(),
@@ -205,7 +205,7 @@ const addCoupon = Joi.object({
 const addCouponAdmin = Joi.object({
   title: Joi.string().required(),
   // code: Joi.string().required(),
-  amount: Joi.number().required(),
+  amount: Joi.string().required(),
   description: Joi.string().allow('').optional(),
   address: Joi.string().required(),
   city_id: Joi.number().required(),
