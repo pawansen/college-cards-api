@@ -264,10 +264,8 @@ exports.stateServices = async (req, res) => {
  */
 exports.citiesServices = async (req, res) => {
     try {
-        const { state_id } = req.query;
         // Fetch all cities from the database
-        let state = 4039;
-        const data = await citiesSchema.find({ state_id: state });
+        const data = await citiesSchema.find({ isDisplay: "yes" });
         if (data.length > 0) {
             return {
                 status: 1,
