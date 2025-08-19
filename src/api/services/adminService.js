@@ -1387,12 +1387,16 @@ exports.getCitiesServices = async (req, res) => {
 exports.getUpdateCityServices = async (req, res) => {
     try {
 
-        const { limit, pageNo } = req.query;
+        const { limit, pageNo, keyword } = req.query;
         let data = [];
         if (limit && pageNo) {
             const limits = limit ? parseInt(limit) : 10
             const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0;
-            data = await citiesSchema.find({ isDisplay: "yes" }).skip(offset).limit(limits);
+            if (keyword) {
+                data = await citiesSchema.find({ isDisplay: "yes", name: { $regex: keyword, $options: "i" } }).skip(offset).limit(limits);
+            } else {
+                data = await citiesSchema.find({ isDisplay: "yes" }).skip(offset).limit(limits);
+            }
         } else {
             data = await citiesSchema.find({ isDisplay: "yes" });
         }
