@@ -1614,6 +1614,28 @@ exports.addContentServices = async (req) => {
  *
  * @returns {Object}
  */
+exports.getContentServices = async (req) => {
+    try {
+        let { type } = req.query;
+        // Check if content with type already exists
+        const contentResponse = await contentSchema.findOne({
+            type: type
+        });
+        if (contentResponse) {
+            return { status: 1, message: 'Successfully added', data: contentResponse };
+        } else {
+            return { status: 0, message: 'Content not found' };
+        }
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
 exports.getDashboardServices = async (req) => {
     try {
         let { type, content } = req.body;
