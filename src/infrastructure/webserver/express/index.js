@@ -25,39 +25,60 @@ exports.createServer = () => {
   /*app.use(httpLogger)*/
 
   /** add header */
-  app.use(function (err, req, res, next) {
-    /*CORS headers*/
-    const responseSettings = {
-      //"AccessControlAllowOrigin": req.headers.origin,
-      AccessControlAllowOrigin: '*',
-      AccessControlAllowHeaders:
-        'Content-Type,X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version, X-File-Name, Authorization',
-      AccessControlAllowMethods: 'POST, GET, PUT, DELETE, OPTIONS',
-      AccessControlAllowCredentials: 'true',
-    }
-    // Set custom headers for CORS
-    res.header(
-      'Access-Control-Allow-Origin',
-      responseSettings.AccessControlAllowOrigin
-    )
-    res.header(
-      'Access-Control-Allow-Headers',
-      req.headers['access-control-request-headers']
-        ? req.headers['access-control-request-headers']
-        : 'x-requested-with'
-    )
-    res.header(
-      'Access-Control-Allow-Methods',
-      req.headers['access-control-request-method']
-        ? req.headers['access-control-request-method']
-        : responseSettings.AccessControlAllowMethods
-    )
-    if ('OPTIONS' === req.method) {
-      res.status(200).send(err).end()
-    } else {
-      next()
-    }
-  })
+  // app.use(function (err, req, res, next) {
+  //   /*CORS headers*/
+  //   const responseSettings = {
+  //     //"AccessControlAllowOrigin": req.headers.origin,
+  //     AccessControlAllowOrigin: '*',
+  //     AccessControlAllowHeaders:
+  //       'Content-Type,X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version, X-File-Name, Authorization',
+  //     AccessControlAllowMethods: 'POST, GET, PUT, DELETE, OPTIONS',
+  //     AccessControlAllowCredentials: 'true',
+  //   }
+  //   // Set custom headers for CORS
+  //   res.header(
+  //     'Access-Control-Allow-Origin',
+  //     responseSettings.AccessControlAllowOrigin
+  //   )
+  //   res.header(
+  //     'Access-Control-Allow-Headers',
+  //     req.headers['access-control-request-headers']
+  //       ? req.headers['access-control-request-headers']
+  //       : 'x-requested-with'
+  //   )
+  //   res.header(
+  //     'Access-Control-Allow-Methods',
+  //     req.headers['access-control-request-method']
+  //       ? req.headers['access-control-request-method']
+  //       : responseSettings.AccessControlAllowMethods
+  //   )
+  //   if ('OPTIONS' === req.method) {
+  //     res.status(200).send(err).end()
+  //   } else {
+  //     next()
+  //   }
+  // })
+
+  // Configure CORS to allow requests from your admin website domain
+  app.use(cors({
+    origin: ['https://mycollegecards.com', 'http://localhost', 'http://15.207.20.2'], // replace with your admin domain(s)
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'X-CSRF-Token',
+      'X-Requested-With',
+      'Accept',
+      'Accept-Version',
+      'Content-Length',
+      'Content-MD5',
+      'Date',
+      'X-Api-Version',
+      'X-File-Name',
+      'Authorization'
+    ]
+  }));
+
   new Routes(app).routesConfig()
   /** listen server */
   mongoose.connect()().then(() => {
