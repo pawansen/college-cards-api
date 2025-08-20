@@ -61,7 +61,7 @@ exports.createServer = () => {
 
   // Configure CORS to allow requests from your admin website domain
   app.use(cors({
-    origin: ['https://mycollegecards.com', 'http://localhost', 'http://15.207.20.2'], // replace with your admin domain(s)
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
