@@ -1,13 +1,13 @@
-const bodyParser = require('body-parser'),
-  cors = require('cors'),
-  express = require('express'),
-  Routes = require('./v1/routes'),
-  { log } = require('../../../api/lib/logger'),
-  { env } = require('../../env');
-mongoose = require('../../../../config/mongoose');
-/*const morgan = require('morgan');*/
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import express from 'express';
+import Routes from './v1/routes.js';
+import { log } from '../../../api/lib/logger.js';
+import { env } from '../../env.js';
+import mongoose from '../../../../config/mongoose.js';
+/*import morgan from 'morgan';*/
 /** create server module */
-exports.createServer = () => {
+export const createServer = () => {
   const app = express()
   const port = env.APPPORT
   const host = env.HOST
@@ -22,41 +22,6 @@ exports.createServer = () => {
   /** http access log */
   /*app.use(httpLogger)*/
 
-  /** add header */
-  // app.use(function (err, req, res, next) {
-  //   /*CORS headers*/
-  //   const responseSettings = {
-  //     //"AccessControlAllowOrigin": req.headers.origin,
-  //     AccessControlAllowOrigin: '*',
-  //     AccessControlAllowHeaders:
-  //       'Content-Type,X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version, X-File-Name, Authorization',
-  //     AccessControlAllowMethods: 'POST, GET, PUT, DELETE, OPTIONS',
-  //     AccessControlAllowCredentials: 'true',
-  //   }
-  //   // Set custom headers for CORS
-  //   res.header(
-  //     'Access-Control-Allow-Origin',
-  //     responseSettings.AccessControlAllowOrigin
-  //   )
-  //   res.header(
-  //     'Access-Control-Allow-Headers',
-  //     req.headers['access-control-request-headers']
-  //       ? req.headers['access-control-request-headers']
-  //       : 'x-requested-with'
-  //   )
-  //   res.header(
-  //     'Access-Control-Allow-Methods',
-  //     req.headers['access-control-request-method']
-  //       ? req.headers['access-control-request-method']
-  //       : responseSettings.AccessControlAllowMethods
-  //   )
-  //   if ('OPTIONS' === req.method) {
-  //     res.status(200).send(err).end()
-  //   } else {
-  //     next()
-  //   }
-  // })
-
   // Configure CORS to allow requests from your admin website domain
   app.use(cors({
     origin: "https://mycollegecards.com", // your website domain
@@ -64,9 +29,16 @@ exports.createServer = () => {
     credentials: true
   }));
 
+  // Handle preflight requests for all routes
+  app.options('*', cors({
+    origin: "https://mycollegecards.com",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+  }));
+
   new Routes(app).routesConfig()
   /** listen server */
-  mongoose.connect()().then(() => {
+  mongoose.connect().then(() => {
     app.listen(port, () => {
       log.info(`Server Running on http://${ host }:${ port }`)
     })
