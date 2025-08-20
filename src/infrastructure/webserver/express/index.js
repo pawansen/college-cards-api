@@ -17,8 +17,6 @@ exports.createServer = () => {
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }))
   /* To handle invalid JSON data request */
   app.use(bodyParser.json({ limit: '50mb' }))
-
-  app.use(cors())
   app.use('/uploads', express.static('uploads'));
 
   /** http access log */
@@ -61,22 +59,9 @@ exports.createServer = () => {
 
   // Configure CORS to allow requests from your admin website domain
   app.use(cors({
-    origin: '*',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'X-CSRF-Token',
-      'X-Requested-With',
-      'Accept',
-      'Accept-Version',
-      'Content-Length',
-      'Content-MD5',
-      'Date',
-      'X-Api-Version',
-      'X-File-Name',
-      'Authorization'
-    ]
+    origin: "https://mycollegecards.com", // your website domain
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   }));
 
   new Routes(app).routesConfig()
