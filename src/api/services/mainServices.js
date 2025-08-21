@@ -79,7 +79,7 @@ exports.loginServices = async (req, res) => {
                     // Check if user already has an active subscription
                     const activeSubscription = await UserSubscribeSchema.findOne({
                         user_id: token.user._id,
-                        status: 'active',
+                        status: { $in: ['active', 'cancelledUsedFullMonth'] },
                         endDate: { $gte: new Date() }
                     });
                     if (activeSubscription) {
@@ -837,7 +837,7 @@ exports.getUserSubscribeServices = async (req, res) => {
         // Check if user already has an active subscription
         const activeSubscription = await UserSubscribeSchema.findOne({
             user_id: _id,
-            status: 'active',
+            status: { $in: ['active', 'cancelledUsedFullMonth'] },
         });
         if (activeSubscription) {
             const cityInfo = {};
@@ -1288,7 +1288,7 @@ exports.getValidateInfoServices = async (req, res) => {
             // Check if user already has an active subscription
             const activeSubscription = await UserSubscribeSchema.findOne({
                 user_id: user._id,
-                status: 'active',
+                status: { $in: ['active', 'cancelledUsedFullMonth'] },
                 endDate: { $gte: new Date() }
             });
             if (activeSubscription) {
@@ -1328,15 +1328,15 @@ exports.cancelMembershipServices = async (req, res) => {
         const { _id } = req.User;
         const user = await UserSubscribeSchema.findOne({ user_id: _id, status: "active", endDate: { $gte: new Date() } });
         if (user) {
-            let status = "cancelled";
+            let status = "cancelledUsedFullMonth";
             // Check if the difference between startDate and today is 15 days or more
             const startDate = new Date(user.startDate);
             const today = new Date();
             const diffTime = today.getTime() - startDate.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            if (diffDays >= 15) {
-                status = "cancelledUsedFullMonth";
-            }
+            //if (diffDays >= 15) {
+            //    status = "cancelledUsedFullMonth";
+            //}
             const updateResult = await UserSubscribeSchema.updateOne(
                 { user_id: _id, status: "active", endDate: { $gte: new Date() } },
                 { $set: { status: status, updatedDate: new Date() } } // Set isActive to false and add updatedDate timestamp
