@@ -236,6 +236,16 @@ const addPackage = Joi.object({
   amount: Joi.number().required(),
   packageType: Joi.string().valid('monthly', 'yearly').required(),
   title: Joi.string().allow('').optional(),
+  status: Joi.string().allow('').optional(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const updatePackage = Joi.object({
+  package_id: Joi.string().required(),
+  amount: Joi.number().required(),
+  packageType: Joi.string().valid('monthly', 'yearly').required(),
+  title: Joi.string().allow('').optional(),
+  status: Joi.string().allow('').optional(),
   Authorization: Joi.string().allow('').optional(),
 })
 
@@ -320,6 +330,7 @@ module.exports = {
   addUpdateCity,
   deletePromoCodeAdmin,
   verifyOtp,
+  updatePackage,
   addFeedbackReplay,
   addContent,
   getContent,

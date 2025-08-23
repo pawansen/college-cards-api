@@ -693,9 +693,10 @@ exports.addPackageServices = async (req) => {
             amount: body.amount,
             title: body.title || 'College Cards Subscription',
             packageType: body.packageType,
+            isActive: body?.status === 'inactive' ? false : true,
         }
-        // Check if a package with the same cityCount already exists
-        const existingPackage = await packageSchema.findOne({ isActive: true });
+        // Check if a package with the same title already exists
+        const existingPackage = await packageSchema.findOne({ isActive: true, packageType: packageType });
         if (existingPackage) {
             // Update the existing package
             await packageSchema.updateOne(
@@ -710,6 +711,60 @@ exports.addPackageServices = async (req) => {
         }
     } catch (err) {
         return err
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.updatePackageServices = async (req) => {
+    try {
+        let { body } = req;
+        let payload = {
+            amount: body.amount,
+            title: body.title || 'College Cards Subscription',
+            packageType: body.packageType,
+            isActive: body?.status === 'inactive' ? false : true,
+        }
+        // Check if a package with the same cityCount already exists
+        await packageSchema.updateOne(
+            { _id: body.package_id },
+            { $set: payload }
+        );
+        return { status: 1, message: 'Package updated successfully.' };
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getPackagesService = async (req, res) => {
+    try {
+        const { user_id, keyward, limit, pageNo } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+
+        // Find all subscriptions for the user and join with package info
+        const packages = await packageSchema.find(
+            {},
+            {},
+            { skip: offset, limit: limits }
+        );
+
+        if (packages) {
+            return { status: 1, message: 'Packages retrieved successfully.', data: packages };
+        } else {
+            return { status: 0, message: 'No packages found.' };
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
     }
 }
 
@@ -1754,5 +1809,54 @@ exports.userStatusUpdateService = async (req) => {
 
     } catch (err) {
         return err
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getAllActiveSubscribeService = async (req, res) => {
+    try {
+
+        const { user_id, keyward, limit, pageNo } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+
+        // Find all subscriptions for the user and join with package info
+        const activeSubscription = await UserSubscribeSchema.find(
+            {},
+            null,
+            { skip: offset, limit: limits }
+        )
+            .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email' })
+            .lean();
+
+        // For each subscription, join cities info based on city_ids
+        for (let sub of activeSubscription) {
+            if (sub.cityCount && sub.cityCount > 0) {
+                const cities = await citiesSchema.find({ id: { $in: sub?.city_ids } }).lean();
+                sub.cityList = cities.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                }));
+            } else {
+                sub.cityList = [];
+            }
+        }
+        if (activeSubscription.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: activeSubscription,
+            }
+        } else {
+            return { status: 0, message: 'No active subscriptions found.' }
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
     }
 }

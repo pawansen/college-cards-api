@@ -32,12 +32,29 @@ const {
     getDashboardServices,
     updateCouponServices,
     userStatusUpdateService,
-    getContentServices
+    getContentServices,
+    getAllActiveSubscribeService,
+    getPackagesService,
+    updatePackageServices
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
         SuccessResponse
     } = require('../../../../utils/apiResponse');
+
+exports.updatePackageController = (req, res) => {
+    updatePackageServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
 
 /**
  * login.
@@ -213,6 +230,26 @@ exports.addCouponController = (req, res) => {
  */
 exports.addPackageController = (req, res) => {
     addPackageServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getPackagesController = (req, res) => {
+    getPackagesService(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)
@@ -674,6 +711,26 @@ exports.getDashboardController = (req, res) => {
  */
 exports.userStatusUpdateController = (req, res) => {
     userStatusUpdateService(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getAllActiveSubscribeController = (req, res) => {
+    getAllActiveSubscribeService(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

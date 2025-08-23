@@ -5,7 +5,7 @@ const Validator = require('../../middlewares/validator'),
         loginController, stateController, citiesController, getProfileController,
         updateUserController, addCouponController, addPackageController, getUserController,
         getCouponController, getCouponInfoController, deleteCouponController, getUserInfoController,
-        getUserActiveSubscribeController, getUserFeedbackController, addFeedbackReplayController,
+        getUserActiveSubscribeController, getAllActiveSubscribeController, getUserFeedbackController, addFeedbackReplayController,
         getFeedbackController, getFeedbackInfoController,
         updateVersionController,
         addUpdateCityController,
@@ -20,7 +20,9 @@ const Validator = require('../../middlewares/validator'),
         addContentController,
         getDashboardController,
         userStatusUpdateController,
-        getContentController
+        getContentController,
+        getPackagesController,
+        updatePackageController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -107,6 +109,13 @@ class AdminRoutes {
 
         /** apis */
         this.app.get(
+            '/v1/admin/get-all-subscriptions',
+            verifyTokenAdmin,
+            getAllActiveSubscribeController
+        )
+
+        /** apis */
+        this.app.get(
             '/v1/admin/get-user-feedback',
             verifyTokenAdmin,
             Validator('getUserProfile'),
@@ -136,6 +145,21 @@ class AdminRoutes {
             verifyTokenAdmin,
             Validator('addPackage'),
             addPackageController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/update-package',
+            verifyTokenAdmin,
+            Validator('updatePackage'),
+            updatePackageController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-packages',
+            verifyTokenAdmin,
+            getPackagesController
         )
 
 
