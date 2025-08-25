@@ -22,7 +22,9 @@ const Validator = require('../../middlewares/validator'),
         userStatusUpdateController,
         getContentController,
         getPackagesController,
-        updatePackageController
+        updatePackageController,
+        getPackageInfoController,
+        deletePackageController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -160,6 +162,23 @@ class AdminRoutes {
             '/v1/admin/get-packages',
             verifyTokenAdmin,
             getPackagesController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-package-info',
+            verifyTokenAdmin,
+            Validator('userSubscribe'),
+            getPackageInfoController
+        )
+
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/delete-package',
+            verifyTokenAdmin,
+            Validator('userSubscribe'),
+            deletePackageController
         )
 
 

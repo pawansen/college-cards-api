@@ -695,20 +695,25 @@ exports.addPackageServices = async (req) => {
             packageType: body.packageType,
             isActive: body?.status === 'inactive' ? false : true,
         }
-        // Check if a package with the same title already exists
-        const existingPackage = await packageSchema.findOne({ isActive: true, packageType: packageType });
-        if (existingPackage) {
-            // Update the existing package
-            await packageSchema.updateOne(
-                { _id: existingPackage._id },
-                { $set: payload }
-            );
-            return { status: 1, message: 'Package updated successfully.' };
-        } else {
-            // Create a new package
-            const newPackage = new packageSchema(payload);
-            return { status: 1, message: 'Package added successfully.' };
-        }
+        console.log(payload);
+        // Create a new package
+        const newPackage = new packageSchema(payload);
+        await newPackage.save();
+        return { status: 1, message: 'Package added successfully.', data: newPackage };
+        // // Check if a package with the same title already exists
+        // const existingPackage = await packageSchema.findOne({ isActive: true, packageType: body.packageType });
+        // if (existingPackage) {
+        //     // Update the existing package
+        //     await packageSchema.updateOne(
+        //         { _id: existingPackage._id },
+        //         { $set: payload }
+        //     );
+        //     return { status: 1, message: 'Package updated successfully.' };
+        // } else {
+        //     // Create a new package
+        //     const newPackage = new packageSchema(payload);
+        //     return { status: 1, message: 'Package added successfully.' };
+        // }
     } catch (err) {
         return err
     }
@@ -761,6 +766,55 @@ exports.getPackagesService = async (req, res) => {
             return { status: 1, message: 'Packages retrieved successfully.', data: packages };
         } else {
             return { status: 0, message: 'No packages found.' };
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getPackageInfoService = async (req, res) => {
+    try {
+        const { package_id } = req.query;
+
+        // Find all subscriptions for the user and join with package info
+        const packages = await packageSchema.findOne(
+            { _id: package_id },
+            {},
+        );
+        if (packages) {
+            return { status: 1, message: 'Packages retrieved successfully.', data: packages };
+        } else {
+            return { status: 0, message: 'No packages found.' };
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.deletePackageService = async (req, res) => {
+    try {
+        const { package_id } = req.body;
+
+        // Delete the package by ID
+        const deleteResult = await packageSchema.deleteOne(
+            { _id: package_id }
+        );
+        if (deleteResult && deleteResult.deletedCount > 0) {
+            return { status: 1, message: 'Package deleted successfully.', data: deleteResult };
+        } else {
+            return { status: 0, message: 'No package found.' };
         }
     } catch (err) {
         console.log(err)

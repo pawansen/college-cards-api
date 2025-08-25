@@ -35,7 +35,9 @@ const {
     getContentServices,
     getAllActiveSubscribeService,
     getPackagesService,
-    updatePackageServices
+    updatePackageServices,
+    getPackageInfoService,
+    deletePackageService
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -731,6 +733,44 @@ exports.userStatusUpdateController = (req, res) => {
  */
 exports.getAllActiveSubscribeController = (req, res) => {
     getAllActiveSubscribeService(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getPackageInfoController = (req, res) => {
+    getPackageInfoService(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deletePackageController = (req, res) => {
+    deletePackageService(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)
