@@ -37,7 +37,9 @@ const {
     getPackagesService,
     updatePackageServices,
     getPackageInfoService,
-    deletePackageService
+    deletePackageService,
+    getPromoCodeInfoService,
+    updatePromoCodeService
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -771,6 +773,44 @@ exports.getPackageInfoController = (req, res) => {
  */
 exports.deletePackageController = (req, res) => {
     deletePackageService(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getPromoCodeInfoController = (req, res) => {
+    getPromoCodeInfoService(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.updatePromoCodeController = (req, res) => {
+    updatePromoCodeService(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

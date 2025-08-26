@@ -1643,11 +1643,6 @@ exports.getPromoCodeServices = async (req, res) => {
                 create_at: 1
             }
         ).skip(offset).limit(limits);
-        // Add base path to logo
-        data = data.map(item => ({
-            ...item.toObject(),
-            logo: item.logo ? env.UPLOAD_URL + item.logo : null
-        }));
         if (data.length > 0) {
             return {
                 status: 1,
@@ -1660,6 +1655,60 @@ exports.getPromoCodeServices = async (req, res) => {
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getPromoCodeInfoService = async (req, res) => {
+    try {
+        const { promo_id } = req.query;
+
+        // Find all subscriptions for the user and join with package info
+        const promocodes = await PromoCodeSchema.findOne(
+            { _id: promo_id },
+            {},
+        );
+        if (promocodes) {
+            return { status: 1, message: 'Promo codes retrieved successfully.', data: promocodes };
+        } else {
+            return { status: 0, message: 'No promo codes found.' };
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.updatePromoCodeService = async (req) => {
+    try {
+        let { body } = req;
+        let payload = {
+            title: body.title,
+            code: body.code,
+            amount: body.amount,
+            maxUsagePerUser: body.maxUsagePerUser,
+            totalUsageLimit: body.totalUsageLimit,
+            status: body.status,
+            validFrom: body.validFrom,
+            validTo: body.validTo
+        }
+        // Check if a promo code with the same code already exists
+        await PromoCodeSchema.updateOne(
+            { _id: body.promo_id },
+            { $set: payload }
+        );
+        return { status: 1, message: 'Promo code updated successfully.' };
+    } catch (err) {
+        return err
     }
 }
 
