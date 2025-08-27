@@ -219,6 +219,11 @@ const deleteCouponAdmin = Joi.object({
   Authorization: Joi.string().allow('').optional(),
 })
 
+const deleteNotificationsAdmin = Joi.object({
+  notification_id: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
 const userStatusUpdate = Joi.object({
   user_id: Joi.string().required(),
   status: Joi.string().valid('yes', 'no').optional(),
@@ -399,5 +404,6 @@ module.exports = {
   getInsuranceUsers,
   getVehicleInfoPredction,
   getModelList,
-  addVehicleModelController
+  addVehicleModelController,
+  deleteNotificationsAdmin
 }

@@ -600,6 +600,48 @@ exports.deleteCouponServices = async (req) => {
     }
 }
 
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteNotificationsServices = async (req) => {
+    try {
+        let { body } = req;
+        // Delete coupon by code and city_id
+        let deletedNotification;
+        let notificationIds = [];
+        if (typeof body.notification_id === 'string') {
+            notificationIds = body.notification_id.split(',').map(id => id.trim()).filter(Boolean);
+        } else if (Array.isArray(body.notification_id)) {
+            notificationIds = body.notification_id;
+        } else if (body.notification_id) {
+            notificationIds = [body.notification_id];
+        }
+
+        if (notificationIds.length > 1) {
+            deletedNotification = await notificationSchema.deleteMany({
+                _id: { $in: notificationIds },
+            });
+        } else if (notificationIds.length === 1) {
+            deletedNotification = await notificationSchema.findOneAndDelete({
+                _id: notificationIds[0],
+            });
+        } else {
+            deletedNotification = null;
+        }
+
+        if (deletedNotification) {
+            return { status: 1, message: 'Notification deleted successfully.' };
+        } else {
+            return { status: 0, message: 'Notification not found.' };
+        }
+    } catch (err) {
+        return err
+    }
+}
+
 /**
  * add user.
  *
@@ -1531,11 +1573,18 @@ exports.getUpdateCityServices = async (req, res) => {
  */
 exports.getNotificationServices = async (req, res) => {
     try {
-        const { limit, pageNo } = req.query;
+        const { limit, pageNo, keyword } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
         const data = await notificationSchema.find(
-            {},
+            {
+                ...(keyword && {
+                    $or: [
+                        { title: { $regex: keyword, $options: "i" } },
+                        { message: { $regex: keyword, $options: "i" } }
+                    ]
+                })
+            },
             {
                 _id: 0,
                 "notification_id": "$_id",

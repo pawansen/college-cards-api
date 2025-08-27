@@ -6,7 +6,7 @@ const Validator = require('../../middlewares/validator'),
         updateUserController, addCouponController, addPackageController, getUserController,
         getCouponController, getCouponInfoController, deleteCouponController, getUserInfoController,
         getUserActiveSubscribeController, getAllActiveSubscribeController, getUserFeedbackController, addFeedbackReplayController,
-        getFeedbackController, getFeedbackInfoController,
+        getFeedbackController, getFeedbackInfoController, deleteNotificationsController,
         updateVersionController,
         addUpdateCityController,
         getCountriesController,
@@ -92,6 +92,14 @@ class AdminRoutes {
             verifyTokenAdmin,
             Validator('deleteCouponAdmin'),
             deleteCouponController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/delete-notifications',
+            verifyTokenAdmin,
+            Validator('deleteNotificationsAdmin'),
+            deleteNotificationsController
         )
 
 

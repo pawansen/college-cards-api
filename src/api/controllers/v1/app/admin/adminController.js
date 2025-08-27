@@ -12,6 +12,7 @@ const {
     getCouponServices,
     getCouponInfoServices,
     deleteCouponServices,
+    deleteNotificationsServices,
     getUserInfoServices,
     getUserActiveSubscribeServices,
     getUserFeedbackServices,
@@ -342,6 +343,24 @@ exports.deleteCouponController = (req, res) => {
         })
 }
 
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteNotificationsController = (req, res) => {
+    deleteNotificationsServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
 
 /**
  * add user.
