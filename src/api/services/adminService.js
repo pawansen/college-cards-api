@@ -1345,15 +1345,30 @@ exports.addFeedbackReplayServices = async (req) => {
  */
 exports.getFeedbackServices = async (req, res) => {
     try {
-        const { limit, pageNo } = req.query;
+        const { limit, pageNo, date, keyword } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
         // Find all subscriptions for the user and join with package info
         // Get all feedback entries for the user and join with user info
 
-        const activeSubscription = await FeedbackSchema.find({ feedback_type: 'direct' })
+        // Build filter for date and keyword
+        let filter = { feedback_type: 'direct' };
+        if (date) {
+            // Assuming date is in YYYY-MM-DD format, filter by createdAt date
+            const start = new Date(date);
+            const end = new Date(date);
+            end.setHours(23, 59, 59, 999);
+            filter.create_at = { $gte: start, $lte: end };
+        }
+        if (keyword) {
+            filter.$or = [
+                { description: { $regex: keyword, $options: 'i' } },
+                // Optionally search in user's name/email if needed
+            ];
+        }
+        const activeSubscription = await FeedbackSchema.find(filter)
             .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
-
+            .skip(offset).limit(limits)
             .lean();
 
         // For each feedback, get its replies (self-join where feedback_id === _id)
@@ -1361,6 +1376,12 @@ exports.getFeedbackServices = async (req, res) => {
             feedback.replies = await FeedbackSchema.find({ feedback_id: feedback._id, feedback_type: 'reply' })
                 .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
                 .lean();
+            if (feedback.city_id) {
+                const city = await citiesSchema.findOne({ id: feedback.city_id }, { id: 1, name: 1 });
+                feedback.city = city ? { id: city.id, name: city.name } : null;
+            } else {
+                feedback.city = null;
+            }
         }
         if (activeSubscription.length > 0) {
             return {
@@ -2010,5 +2031,46 @@ exports.getAllActiveSubscribeService = async (req, res) => {
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteFeedbackService = async (req) => {
+    try {
+        let { body } = req;
+        // Delete coupon by code and city_id
+        let deletedNotification;
+        let notificationIds = [];
+        if (typeof body.feedback_id === 'string') {
+            notificationIds = body.feedback_id.split(',').map(id => id.trim()).filter(Boolean);
+        } else if (Array.isArray(body.feedback_id)) {
+            notificationIds = body.feedback_id;
+        } else if (body.feedback_id) {
+            notificationIds = [body.feedback_id];
+        }
+
+        if (notificationIds.length > 1) {
+            deletedNotification = await FeedbackSchema.deleteMany({
+                _id: { $in: notificationIds },
+            });
+        } else if (notificationIds.length === 1) {
+            deletedNotification = await FeedbackSchema.findOneAndDelete({
+                _id: notificationIds[0],
+            });
+        } else {
+            deletedNotification = null;
+        }
+
+        if (deletedNotification) {
+            return { status: 1, message: 'Feedback deleted successfully.' };
+        } else {
+            return { status: 0, message: 'Feedback not found.' };
+        }
+    } catch (err) {
+        return err
     }
 }

@@ -643,10 +643,13 @@ exports.feedbackServices = async (req) => {
         const { _id } = req.User;
         let { description } = req.body
         // Save feedback to the database
+        // Get all city_ids for the user
+        const userCities = await userCitiesSchema.findOne({ user_id: _id });
         const feedbackEntry = new FeedbackSchema({
             user_id: _id,
             description: description,
-            feedback_type: 'direct', // Assuming direct feedback type
+            feedback_type: 'direct', // Assuming direct feedback type,
+            city_id: userCities.city_id // Assuming feedback is for the first city
         });
         await feedbackEntry.save();
         return { status: 1, message: 'Feedback submitted successfully.' };

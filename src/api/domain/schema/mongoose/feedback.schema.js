@@ -13,6 +13,10 @@ const feedbackSchema = new Schema(
             type: String,
             required: false,
         },
+        city_id: {
+            type: String,
+            required: false,
+        },
         entity_type: {
             type: String,
             required: false,

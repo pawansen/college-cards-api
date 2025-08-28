@@ -40,7 +40,8 @@ const {
     getPackageInfoService,
     deletePackageService,
     getPromoCodeInfoService,
-    updatePromoCodeService
+    updatePromoCodeService,
+    deleteFeedbackService
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -830,6 +831,25 @@ exports.getPromoCodeInfoController = (req, res) => {
  */
 exports.updatePromoCodeController = (req, res) => {
     updatePromoCodeService(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteFeedbacksController = (req, res) => {
+    deleteFeedbackService(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)
