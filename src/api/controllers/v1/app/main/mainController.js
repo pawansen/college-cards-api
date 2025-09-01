@@ -25,7 +25,8 @@ const {
     deleteAccountServices,
     getContentServices,
     getValidateInfoServices,
-    cancelMembershipServices
+    cancelMembershipServices,
+    contactUsServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -442,6 +443,25 @@ exports.getVersionController = (req, res) => {
  */
 exports.forgotPasswordController = (req, res) => {
     forgotPasswordServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.contactUsController = (req, res) => {
+    contactUsServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

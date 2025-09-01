@@ -8,7 +8,7 @@ const loginSchema = Joi.object({
   grant_type: Joi.string().allow('').optional(),
   username: Joi.string().allow('').optional(),
   deviceType: Joi.string().valid('android', 'ios').required(),
-  deviceToken: Joi.string().required()
+  deviceToken: Joi.string().allow('').optional(),
 })
 
 module.exports = loginSchema

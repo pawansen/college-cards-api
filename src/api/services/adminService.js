@@ -27,7 +27,8 @@ const bcrypt = require('bcrypt'),
     PromoCodeSchema = require('../domain/schema/mongoose/promoCode.schema'),
     contentSchema = require('../domain/schema/mongoose/content.schema'),
     Request = OAuth2Server.Request,
-    Response = OAuth2Server.Response;
+    Response = OAuth2Server.Response,
+    { sendSms, sendOtp, sendContactUs } = require('../lib/sms');
 
 /**
  * login.
@@ -2072,5 +2073,34 @@ exports.deleteFeedbackService = async (req) => {
         }
     } catch (err) {
         return err
+    }
+}
+
+/**
+ * get.
+ *
+ * @returns {Object}
+ */
+
+exports.contactUsServices = async (req, res) => {
+    try {
+        const { email, message } = req.body;
+        try {
+            const messageData = { ...req.body };
+            // Send SMS and update user with OTP
+            await sendContactUs(email, message, messageData);
+            return {
+                status: 1,
+                message: 'Contact sent successfully.',
+                data: { email }
+            };
+        } catch (error) {
+            console.log(error.response.body.errors)
+            return { status: 0, message: 'Failed to send contact message.' };
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
     }
 }

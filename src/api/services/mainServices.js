@@ -25,6 +25,7 @@ const bcrypt = require('bcrypt'),
     VersionSchema = require('../domain/schema/mongoose/version.schema'),
     Notification = require('../utils/notification'),
     contentSchema = require('../domain/schema/mongoose/content.schema'),
+    { sendSms, sendOtp, sendContactUs } = require('../lib/sms'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -104,6 +105,16 @@ exports.loginServices = async (req, res) => {
                             loginType: 'app',
                         }
                     )
+                    await Notification.sendFCMNotification(
+                        token?.user.deviceToken,
+                        "New Login",
+                        "You have successfully logged in on a new device. Please logout from this device if it was not you.",
+                        {
+                            event_id: token.user._id,
+                            user_id: token.user._id,
+                            event_type: "logout"
+                        }
+                    );
                     return {
                         status: 1,
                         message: 'User successfully logged in.',
@@ -1123,17 +1134,53 @@ exports.forgotPasswordServices = async (req, res) => {
         const user = await userSchema.findOne({ email });
         if (user) {
             // Generate a 4-digit random OTP
-            //const otp = Math.floor(1000 + Math.random() * 9000);
-            const otp = 1234; // For testing purposes, use a fixed OTP
-            // Update the user document with the OTP
-            await userSchema.updateOne({ email }, { $set: { otp, otpExpireTime: Date.now() + 15 * 60 * 1000 } });
-            return {
-                status: 1,
-                message: 'OTP sent successfully.',
-                data: { email }
-            };
+            const otp = Math.floor(1000 + Math.random() * 9000);
+            //const otp = 1234; // For testing purposes, use a fixed OTP
+            try {
+                // Send SMS and update user with OTP
+                await sendOtp(user.email, `Your College Cards OTP is ${ otp }. Do Not Share.`);
+                await userSchema.updateOne({ email }, { $set: { otp, otpExpireTime: Date.now() + 15 * 60 * 1000 } });
+                return {
+                    status: 1,
+                    message: 'OTP sent successfully.',
+                    data: { email }
+                };
+            } catch (error) {
+                console.log(error.response.body.errors)
+                await userSchema.updateOne({ email }, { $set: { otp: null, otpExpireTime: null } });
+                return { status: 0, message: 'Failed to send OTP.' };
+            }
         } else {
             return { status: 0, message: 'User not found.' };
+        }
+
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * get.
+ *
+ * @returns {Object}
+ */
+
+exports.contactUsServices = async (req, res) => {
+    try {
+        const { email, message } = req.body;
+        try {
+            const messageData = { ...req.body };
+            // Send SMS and update user with OTP
+            await sendContactUs(email, message, messageData);
+            return {
+                status: 1,
+                message: 'Contact sent successfully.',
+                data: { email }
+            };
+        } catch (error) {
+            console.log(error.response.body.errors)
+            return { status: 0, message: 'Failed to send contact message.' };
         }
 
     } catch (err) {

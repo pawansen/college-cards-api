@@ -284,6 +284,7 @@ const updateVersion = Joi.object({
 
 const forgotPassword = Joi.object({
   email: Joi.string().email().required(),
+  //mobile: Joi.string().required()
 })
 
 const verifyOtp = Joi.object({
