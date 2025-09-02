@@ -21,6 +21,7 @@ const addUser = Joi.object({
       'string.email': 'Email must be a valid email address',
       'any.required': 'Email is required'
     }),
+  countryCode: Joi.string().required(),
   deviceId: Joi.string().required(),
   deviceType: Joi.string().valid('android', 'ios').required(),
   deviceToken: Joi.string().required(),

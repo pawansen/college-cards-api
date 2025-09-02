@@ -5,6 +5,7 @@ const accountSid = env.TWILIO_ACCOUNT_SID;
 const authToken = env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const fromEmail = env.TWILIO_EMAIL;
+const fromMobile = env.TWILIO_PHONE_NUMBER;
 const sendGridApiKey = env.SENDGRID_API_KEY;
 /**
  * Send an SMS using Twilio
@@ -15,7 +16,7 @@ const sendGridApiKey = env.SENDGRID_API_KEY;
 function sendSms(to, body) {
   return client.messages.create({
     body,
-    from: from,
+    from: "+15513688270",
     to
   });
 }

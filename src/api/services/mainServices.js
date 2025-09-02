@@ -59,6 +59,7 @@ exports.loginServices = async (req, res) => {
                         token: token.accessToken,
                         refreshToken: token.refresh_token,
                         referralCode: token.user.referralCode,
+                        countryCode: token.user?.countryCode,
                         profileImage: env.UPLOAD_URL + token.user.profileImage,
                         deviceId: token.user.deviceId,
                         isCityUpdated: false,
@@ -154,6 +155,7 @@ exports.registerServices = async (req, res) => {
             auth_password: salt,
             grant: body.password,
             mobile: body.mobile,
+            countryCode: body.countryCode,
             deviceId: body.deviceId,
             deviceType: body.deviceType,
             deviceToken: body.deviceToken,
@@ -319,6 +321,7 @@ exports.getProfileServices = async (req, res) => {
                 createDate: 1,
                 lastLoginAt: 1,
                 deviceToken: 1,
+                countryCode: 1,
                 password: 1, deviceType: 1, loginType: 1, isActive: 1, isEmailVerified: 1, isMobileVerified: 1
             }
         ).lean();
@@ -336,6 +339,7 @@ exports.getProfileServices = async (req, res) => {
                 referralCode: user.referralCode,
                 profileImage: env.UPLOAD_URL + user.profileImage,
                 deviceId: user.deviceId,
+                countryCode: user?.countryCode,
             }
             return {
                 status: 1,
@@ -1135,18 +1139,20 @@ exports.forgotPasswordServices = async (req, res) => {
         if (user) {
             // Generate a 4-digit random OTP
             const otp = Math.floor(1000 + Math.random() * 9000);
+
             //const otp = 1234; // For testing purposes, use a fixed OTP
             try {
+                const response = await sendSms(user.mobile, `Your College Cards OTP is ${ otp }. Do Not Share.`);
                 // Send SMS and update user with OTP
                 await sendOtp(user.email, `Your College Cards OTP is ${ otp }. Do Not Share.`);
                 await userSchema.updateOne({ email }, { $set: { otp, otpExpireTime: Date.now() + 15 * 60 * 1000 } });
                 return {
                     status: 1,
                     message: 'OTP sent successfully.',
-                    data: { email }
+                    data: response
                 };
             } catch (error) {
-                console.log(error.response.body.errors)
+                console.log(error)
                 await userSchema.updateOne({ email }, { $set: { otp: null, otpExpireTime: null } });
                 return { status: 0, message: 'Failed to send OTP.' };
             }

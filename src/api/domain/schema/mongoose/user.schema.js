@@ -28,6 +28,11 @@ const userSchema = new Schema(
             sparse: true,
             trim: true,
         },
+        countryCode: {
+            type: String,
+            required: false,
+            trim: true,
+        },
         password: {
             type: String,
             required: true,

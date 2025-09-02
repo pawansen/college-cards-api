@@ -84,6 +84,7 @@ module.exports.getUser = async function (email, password) {
       createDate: 1,
       lastLoginAt: 1,
       deviceToken: 1,
+      countryCode: 1,
       password: 1, deviceType: 1, loginType: 1, isActive: 1, isEmailVerified: 1, isMobileVerified: 1, isDelete: 1
     }
   ).lean();
