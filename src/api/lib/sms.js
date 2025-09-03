@@ -49,9 +49,11 @@ async function sendOtp(toEmail, otp) {
  */
 async function sendContactUs(to, title, messageData) {
   sgMail.setApiKey(sendGridApiKey);
+  // Allow 'to' to be a single email or an array of emails
+  const recipients = ['info@mycollegecards.com', 'collegecards.aj@gmail.com']
   const msg = {
-    to: to, // Change to your recipient
-    from: fromEmail, // Change to your verified sender
+    to: recipients, // SendGrid supports array of emails
+    from: fromEmail,
     subject: 'CollegeCards Contact Us',
     text: messageData.message,
     html: `<!DOCTYPE html>
