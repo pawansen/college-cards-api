@@ -1144,7 +1144,7 @@ exports.forgotPasswordServices = async (req, res) => {
             try {
                 const response = await sendSms(user.mobile, `Your College Cards OTP is ${ otp }. Do Not Share.`);
                 // Send SMS and update user with OTP
-                await sendOtp(user.email, `Your College Cards OTP is ${ otp }. Do Not Share.`);
+                await sendOtp(user.email, otp, `Your College Cards OTP is ${ otp }. Do Not Share.`);
                 await userSchema.updateOne({ email }, { $set: { otp, otpExpireTime: Date.now() + 15 * 60 * 1000 } });
                 return {
                     status: 1,

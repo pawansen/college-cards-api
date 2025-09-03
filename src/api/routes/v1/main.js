@@ -9,7 +9,8 @@ const Validator = require('../../middlewares/validator'),
         getVersionController, contactUsController,
         forgotPasswordController, verifyOtpController, deleteAccountController, getContentController, getValidateInfoController,
         cancelMembershipController
-    } = require('../../controllers/v1/app/main/mainController')
+    } = require('../../controllers/v1/app/main/mainController'),
+    { getCountriesController } = require('../../controllers/v1/app/admin/adminController');
 
 class MainRoutes {
     constructor(app) {
@@ -200,6 +201,13 @@ class MainRoutes {
             '/v1/cancel-membership',
             verifyToken,
             cancelMembershipController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/countries',
+            verifyToken,
+            getCountriesController
         )
 
     }
