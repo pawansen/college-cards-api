@@ -206,7 +206,6 @@ class MainRoutes {
         /** apis */
         this.app.get(
             '/v1/countries',
-            verifyToken,
             getCountriesController
         )
 

@@ -14,11 +14,16 @@ const sendGridApiKey = env.SENDGRID_API_KEY;
  * @returns {Promise} - Resolves with Twilio message response
  */
 function sendSms(to, body) {
-  return client.messages.create({
-    body,
-    from: "+15513688270",
-    to
-  });
+  try {
+    return client.messages.create({
+      body,
+      from: "+15513688270",
+      to
+    });
+  } catch (error) {
+    console.error('Twilio SMS send error:', error);
+    // throw error;
+  }
 }
 /**
  * Send OTP via SMS and email using Twilio

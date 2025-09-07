@@ -1154,7 +1154,7 @@ exports.forgotPasswordServices = async (req, res) => {
             } catch (error) {
                 console.log(error)
                 await userSchema.updateOne({ email }, { $set: { otp: null, otpExpireTime: null } });
-                return { status: 0, message: 'Failed to send OTP.' };
+                return { status: 0, message: error.message || 'Failed to send OTP.' };
             }
         } else {
             return { status: 0, message: 'User not found.' };
