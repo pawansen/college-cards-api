@@ -35,13 +35,13 @@ function sendSms(to, body) {
 async function sendOtp(toEmail, otp, message) {
   // Send SMS
   // Send Email via Twilio SendGrid
-  const APP_NAME = "College Cards"
-  const LOGO_URL = env.UPLOAD_URL + "/public/images/logo.png"
+  const APP_NAME = "College Cards";
+  const LOGO_URL = env.UPLOAD_URL + "/public/images/logo.png";
 
   sgMail.setApiKey(sendGridApiKey);
   const msg = {
     to: toEmail,
-    from: fromEmail,
+    from: "no-reply@em8513.mycollegecards.com", // Updated single sender
     subject: 'CollegeCards Your OTP Code',
     text: message,
     html: `<!doctype html>
@@ -52,8 +52,8 @@ async function sendOtp(toEmail, otp, message) {
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>${ APP_NAME } — Your OTP Code</title>
     <style>
-      /* ----- Client Resets ----- */
       html, body { margin:0 !important; padding:0 !important; height:100% !important; width:100% !important; }
+      * { -ms-text-size-adjust:100%; -webkit-text-size
       * { -ms-text-size-adjust:100%; -webkit-text-size-adjust:100%; }
       table, td { mso-table-lspace:0pt !important; mso-table-rspace:0pt !important; }
       img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; }
@@ -176,10 +176,10 @@ async function sendOtp(toEmail, otp, message) {
 async function sendContactUs(to, title, messageData) {
   sgMail.setApiKey(sendGridApiKey);
   // Allow 'to' to be a single email or an array of emails
-  const recipients = ['info@mycollegecards.com', 'collegecards.aj@gmail.com']
+  const recipients = ['info@mycollegecards.com', 'collegecards.aj@gmail.com', 'pawansen9770@gmail.com']
   const msg = {
     to: recipients, // SendGrid supports array of emails
-    from: fromEmail,
+    from: "no-reply@em8513.mycollegecards.com",
     subject: 'CollegeCards Contact Us',
     text: messageData.message,
     html: `<!DOCTYPE html>

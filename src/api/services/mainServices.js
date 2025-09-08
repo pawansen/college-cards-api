@@ -1142,9 +1142,9 @@ exports.forgotPasswordServices = async (req, res) => {
 
             //const otp = 1234; // For testing purposes, use a fixed OTP
             try {
-                const response = await sendSms(user.mobile, `Your College Cards OTP is ${ otp }. Do Not Share.`);
+                await sendSms(user.countryCode + "" + user.mobile, `Your College Cards OTP is ${ otp }. Do Not Share.`);
                 // Send SMS and update user with OTP
-                await sendOtp(user.email, otp, `Your College Cards OTP is ${ otp }. Do Not Share.`);
+                const response = await sendOtp(user.email, otp, `Your College Cards OTP is ${ otp }. Do Not Share.`);
                 await userSchema.updateOne({ email }, { $set: { otp, otpExpireTime: Date.now() + 15 * 60 * 1000 } });
                 return {
                     status: 1,
@@ -1161,7 +1161,7 @@ exports.forgotPasswordServices = async (req, res) => {
         }
 
     } catch (err) {
-        console.log(err)
+        console.log(err.message)
         return { status: 0, message: err }
     }
 }
