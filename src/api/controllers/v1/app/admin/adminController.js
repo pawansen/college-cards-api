@@ -42,12 +42,27 @@ const {
     getPromoCodeInfoService,
     updatePromoCodeService,
     deleteFeedbackService,
-    contactUsServices
+    contactUsServices,
+    getVersionServices
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
         SuccessResponse
     } = require('../../../../utils/apiResponse');
+
+exports.getVersionController = (req, res) => {
+    getVersionServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
 
 exports.updatePackageController = (req, res) => {
     updatePackageServices(req)

@@ -176,7 +176,7 @@ async function sendOtp(toEmail, otp, message) {
 async function sendContactUs(to, title, messageData) {
   sgMail.setApiKey(sendGridApiKey);
   // Allow 'to' to be a single email or an array of emails
-  const recipients = ['info@mycollegecards.com', 'collegecards.aj@gmail.com', 'pawansen9770@gmail.com']
+  const recipients = ['info@mycollegecards.com', 'collegecards.aj@gmail.com']
   const msg = {
     to: recipients, // SendGrid supports array of emails
     from: "no-reply@em8513.mycollegecards.com",

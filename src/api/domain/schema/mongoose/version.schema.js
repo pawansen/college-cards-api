@@ -6,7 +6,12 @@ const Schema = mongoose.Schema;
  */
 const versionSchema = new Schema(
     {
-        isCompulsoryUpdate: {
+        isCompulsoryUpdateAndroid: {
+            type: String,
+            enum: ['yes', 'no'],
+            default: 'no',
+        },
+        isCompulsoryUpdateIos: {
             type: String,
             enum: ['yes', 'no'],
             default: 'no',
@@ -17,6 +22,16 @@ const versionSchema = new Schema(
             default: null,
         },
         iosVersion: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        androidVersionPrev: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        iosVersionPrev: {
             type: String,
             required: false,
             default: null,

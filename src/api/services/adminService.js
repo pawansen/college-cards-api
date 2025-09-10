@@ -1444,15 +1444,35 @@ exports.getFeedbackInfoServices = async (req, res) => {
  */
 exports.updateVersionServices = async (req) => {
     try {
-        let { androidVersion, isCompulsoryUpdate, iosVersion } = req.body
+        let { androidVersion, isCompulsoryUpdateAndroid, iosVersion, androidVersionPrev, iosVersionPrev, isCompulsoryUpdateIos } = req.body
         // Save feedback to the database
         // Always update the single version record (assume only one document exists)
         await VersionSchema.updateOne(
             {}, // empty filter to match any document
-            { $set: { androidVersion, iosVersion, isCompulsoryUpdate } },
+            { $set: { androidVersion, iosVersion, isCompulsoryUpdateAndroid, isCompulsoryUpdateIos, androidVersionPrev, iosVersionPrev } },
             { upsert: true } // insert if not exists
         );
         return { status: 1, message: 'Version updated successfully.' };
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getVersionServices = async (req) => {
+    try {
+        // Save feedback to the database
+        // Always update the single version record (assume only one document exists)
+        const version = await VersionSchema.findOne({});
+        if (version) {
+            return { status: 1, message: 'Version fetched successfully.', data: version };
+        } else {
+            return { status: 0, message: 'Version not found.' };
+        }
     } catch (err) {
         return err
     }
@@ -1830,7 +1850,7 @@ exports.addContentServices = async (req) => {
             return { status: 1, message: 'Successfully added', data: { ...savedContent.toObject(), id: savedContent._id } };
         } else {
             // Update existing content
-            await contentSchema.updateOne({ _id: contentResponse._id }, { $set: payload });
+            await contentSchema.updateOne({ _id: contentResponse._id }, { $set: payload, create_at: new Date().toISOString() });
             return { status: 1, message: 'Successfully updated', data: { ...contentResponse.toObject(), ...payload, id: contentResponse._id } };
         }
     } catch (err) {
