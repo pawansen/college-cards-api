@@ -103,6 +103,7 @@ exports.loginServices = async (req, res) => {
                             lastLoginIp: requestIp.getClientIp(req),
                             deviceType: req.body.deviceType || 'android',
                             deviceToken: req.body.deviceToken || null,
+                            deviceId: req.body.deviceId || null,
                             loginType: 'app',
                         }
                     )
@@ -643,6 +644,12 @@ exports.logoutServices = async (req) => {
         const { _id } = req.User;
         // Invalidate all OAuth tokens for the current user
         await OAuthTokenSchema.deleteMany({ user_id: _id });
+        await userSchema.updateOne(
+            { _id: _id },
+            {
+                deviceToken: null,
+            }
+        )
         return { status: 1, message: 'Logged out successfully.' };
     } catch (err) {
         return err
