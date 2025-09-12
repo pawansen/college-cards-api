@@ -25,7 +25,7 @@ const bcrypt = require('bcrypt'),
     VersionSchema = require('../domain/schema/mongoose/version.schema'),
     Notification = require('../utils/notification'),
     contentSchema = require('../domain/schema/mongoose/content.schema'),
-    { sendSms, sendOtp, sendContactUs } = require('../lib/sms'),
+    { sendSms, sendOtp, sendContactUs, sendEmailCancelSubscription } = require('../lib/sms'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
 
@@ -115,6 +115,17 @@ exports.loginServices = async (req, res) => {
                             event_id: token.user._id,
                             user_id: token.user._id,
                             event_type: "logout"
+                        }
+                    );
+                    await Notification.sendFCMNotification(
+                        token?.user.deviceToken,
+                        "Login Successful",
+                        `You have successfully logged in.`,
+                        {
+                            event_id: token.user._id,
+                            user_id: token.user._id,
+                            event_type: "login",
+                            link: ""
                         }
                     );
                     return {
@@ -232,6 +243,17 @@ exports.registerServices = async (req, res) => {
                         subscription: null,
                         cityList: []
                     };
+                    await Notification.sendFCMNotification(
+                        body.deviceToken,
+                        "Register Successful",
+                        `You have successfully registered.`,
+                        {
+                            event_id: savedUser._id,
+                            user_id: savedUser._id,
+                            event_type: "register",
+                            link: ""
+                        }
+                    );
                     return {
                         status: 1, message: 'Successfully added', data: data
                     };
@@ -832,7 +854,8 @@ exports.userSubscribeServices = async (req, res) => {
                     {
                         event_id: subscribeInfo._id,
                         user_id: _id,
-                        event_type: "subscribe"
+                        event_type: "subscribe",
+                        link: ""
                     }
                 );
             }
@@ -1253,7 +1276,7 @@ exports.verifyOtpServices = async (req, res) => {
 
 exports.deleteAccountServices = async (req, res) => {
     try {
-        const { _id } = req.User;
+        const { _id, deviceToken } = req.User;
         // Check if user exists by email
         const user = await userSchema.findOne({ _id });
         if (user) {
@@ -1264,6 +1287,24 @@ exports.deleteAccountServices = async (req, res) => {
             if (updateResult.modifiedCount > 0) {
                 // Delete all OAuth tokens for the current user after account deletion
                 await OAuthTokenSchema.deleteMany({ user_id: _id });
+                await UserSubscribeSchema.updateOne(
+                    { user_id: user._id, },
+                    {
+                        status: "inactive",
+                        endDate: { $gte: new Date() }
+                    }
+                );
+                await Notification.sendFCMNotification(
+                    deviceToken,
+                    "Account Deletion Successful",
+                    `You have successfully deleted your account.`,
+                    {
+                        event_id: _id,
+                        user_id: _id,
+                        event_type: "delete_account",
+                        link: ""
+                    }
+                );
                 return { status: 1, message: 'Account deleted successfully.', data: { _id } };
             } else {
                 return { status: 0, message: 'Account not deleted.' };
@@ -1390,7 +1431,7 @@ exports.getValidateInfoServices = async (req, res) => {
 
 exports.cancelMembershipServices = async (req, res) => {
     try {
-        const { _id } = req.User;
+        const { _id, deviceToken, email } = req.User;
         const user = await UserSubscribeSchema.findOne({ user_id: _id, status: "active", endDate: { $gte: new Date() } });
         if (user) {
             let status = "cancelledUsedFullMonth";
@@ -1407,6 +1448,19 @@ exports.cancelMembershipServices = async (req, res) => {
                 { $set: { status: status, updatedDate: new Date() } } // Set isActive to false and add updatedDate timestamp
             );
             if (updateResult.modifiedCount > 0) {
+                await Notification.sendFCMNotification(
+                    deviceToken,
+                    "Membership Cancel Successful",
+                    `You have successfully cancelled your membership.`,
+                    {
+                        event_id: _id,
+                        user_id: _id,
+                        event_type: "cancel_membership",
+                        link: ""
+                    }
+                );
+                const message = `Your membership has been Cancelled. If you have any questions, please contact support.`;
+                sendEmailCancelSubscription(email, status, message);
                 return { status: 1, message: 'Membership cancelled successfully.', data: { id: _id } };
             } else {
                 return { status: 0, message: 'Membership not found.' };

@@ -26,9 +26,10 @@ const bcrypt = require('bcrypt'),
     notificationSchema = require('../domain/schema/mongoose/notification.schema'),
     PromoCodeSchema = require('../domain/schema/mongoose/promoCode.schema'),
     contentSchema = require('../domain/schema/mongoose/content.schema'),
+    Notification = require('../utils/notification'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response,
-    { sendSms, sendOtp, sendContactUs } = require('../lib/sms');
+    { sendSms, sendOtp, sendContactUs, sendEmailAccountActivation } = require('../lib/sms');
 
 /**
  * login.
@@ -400,7 +401,6 @@ exports.addCouponServices = async (req) => {
             const numbers = Math.floor(100 + Math.random() * 900); // 3 digits
             return letters + numbers;
         }
-
         let payload = {
             title: body.title,
             code: body.code || generateRandomCode(),
@@ -419,11 +419,28 @@ exports.addCouponServices = async (req) => {
         const existingUser = await couponSchema.findOne({
             $and: [{ code: body.code }, { city_id: body.city_id }]
         });
-
         if (!existingUser) {
             // Create new user
             const newUser = new couponSchema(payload);
             const savedUser = await newUser.save();
+            const users = await userSchema.find({}, { _id: 1, deviceToken: 1, email: 1 });
+            if (users.length > 0) {
+                users.forEach(user => {
+                    if (user.deviceToken) {
+                        Notification.sendFCMNotification(
+                            user.deviceToken,
+                            "New Coupon Available",
+                            `A new coupon has been added: ${ body.title }`,
+                            {
+                                event_id: user._id,
+                                user_id: user._id,
+                                event_type: "new_coupon",
+                                link: ""
+                            }
+                        );
+                    }
+                });
+            }
             return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), id: savedUser._id, logo: env.UPLOAD_URL + savedUser.logo } };
         } else {
             return { status: 0, message: 'Coupon code already exists' };
@@ -1324,7 +1341,7 @@ exports.getUserFeedbackServices = async (req, res) => {
 exports.addFeedbackReplayServices = async (req) => {
     try {
         const { _id } = req.User;
-        let { description, feedback_id } = req.body
+        let { description, feedback_id, user_id } = req.body
         // Save feedback to the database
         const feedbackEntry = new FeedbackSchema({
             user_id: _id,
@@ -1333,6 +1350,24 @@ exports.addFeedbackReplayServices = async (req) => {
             feedback_id: feedback_id
         });
         await feedbackEntry.save();
+        const users = await userSchema.find({ _id: user_id }, { _id: 1, deviceToken: 1, email: 1 });
+        if (users.length > 0) {
+            users.forEach(user => {
+                if (user.deviceToken) {
+                    Notification.sendFCMNotification(
+                        user.deviceToken,
+                        "New Feedback Reply",
+                        `You have a new reply to your feedback: ${ feedbackEntry.description }`,
+                        {
+                            event_id: feedback_id,
+                            user_id: _id,
+                            event_type: "feedback_reply",
+                            link: ""
+                        }
+                    );
+                }
+            });
+        }
         return { status: 1, message: 'Feedback submitted successfully.' };
     } catch (err) {
         return err
@@ -1987,9 +2022,11 @@ exports.userStatusUpdateService = async (req) => {
     try {
         let { body } = req;
         let payload = {}
+        let status = '';
 
         if (body.status) {
             payload.isActive = body.status === 'yes' ? true : false
+            status = body.status === 'yes' ? 'activated' : 'deactivated';
         }
         if (body.delete) {
             payload.isDelete = body.delete === 'yes' ? true : false
@@ -1999,6 +2036,26 @@ exports.userStatusUpdateService = async (req) => {
             { _id: body.user_id },
             { $set: payload }
         );
+        const users = await userSchema.find({ _id: body.user_id }, { _id: 1, deviceToken: 1, email: 1 });
+        if (users.length > 0) {
+            users.forEach(user => {
+                if (user.deviceToken) {
+                    Notification.sendFCMNotification(
+                        user.deviceToken,
+                        "Account Status Updated",
+                        `Your account has been ${ status }.`,
+                        {
+                            event_id: body.user_id,
+                            user_id: body.user_id,
+                            event_type: "users_status_update",
+                            link: ""
+                        }
+                    );
+                    const message = `Your account has been ${ status } by admin. If you have any questions, please contact support.`;
+                    sendEmailAccountActivation(user.email, status, message);
+                }
+            });
+        }
         return { status: 1, message: 'User updated successfully.' };
 
     } catch (err) {

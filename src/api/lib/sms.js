@@ -166,6 +166,122 @@ async function sendOtp(toEmail, otp, message) {
   await sgMail.send(msg);
 }
 
+/**
+ * Send OTP via SMS and email using Twilio
+ * @param {string} toPhone - Recipient phone number (in E.164 format)
+ * @param {string} toEmail - Recipient email address
+ * @param {string} otp - The OTP code to send
+ * @returns {Promise} - Resolves when both SMS and email are sent
+ */
+async function sendEmailAccountActivation(toEmail, status, message) {
+  // Send SMS
+  // Send Email via Twilio SendGrid
+  const APP_NAME = "College Cards";
+  const LOGO_URL = env.UPLOAD_URL + "/public/images/logo.png";
+
+  sgMail.setApiKey(sendGridApiKey);
+  const msg = {
+    to: toEmail,
+    from: "no-reply@em8513.mycollegecards.com",
+    subject: 'CollegeCards Account Update',
+    text: message,
+    html: `
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+          <title>${ APP_NAME } Account Update</title>
+          <style>
+            body { background: #f6f8fa; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+            .container { max-width: 520px; margin: 32px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 32px; }
+            .header { text-align: center; }
+            .logo { width: 44px; height: 44px; border-radius: 8px; }
+            .title { font-size: 22px; font-weight: bold; color: #2c4ccb; margin: 18px 0 8px; }
+            .status { font-size: 16px; margin: 18px 0; color: #333; }
+            .footer { margin-top: 32px; font-size: 12px; color: #888; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <img src="${ LOGO_URL }" alt="Logo" class="logo" />
+              <div class="title">${ APP_NAME }</div>
+            </div>
+            <div class="status">
+              <p>Hello,</p>
+              <p>Your account status has been updated to: <strong>${ status }</strong>.</p>
+              <p>${ message }</p>
+            </div>
+            <div class="footer">
+              &copy; ${ new Date().getFullYear() } ${ APP_NAME }. All rights reserved.
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  };
+  await sgMail.send(msg);
+}
+
+/**
+ * Send OTP via SMS and email using Twilio
+ * @param {string} toPhone - Recipient phone number (in E.164 format)
+ * @param {string} toEmail - Recipient email address
+ * @param {string} otp - The OTP code to send
+ * @returns {Promise} - Resolves when both SMS and email are sent
+ */
+async function sendEmailCancelSubscription(toEmail, status, message) {
+  // Send SMS
+  // Send Email via Twilio SendGrid
+  const APP_NAME = "College Cards";
+  const LOGO_URL = env.UPLOAD_URL + "/public/images/logo.png";
+
+  sgMail.setApiKey(sendGridApiKey);
+  const msg = {
+    to: toEmail,
+    from: "no-reply@em8513.mycollegecards.com",
+    subject: 'CollegeCards Subscription Cancelled',
+    text: message,
+    html: `
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+          <title>${ APP_NAME } Subscription Cancelled</title>
+          <style>
+            body { background: #f6f8fa; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+            .container { max-width: 520px; margin: 32px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 32px; }
+            .header { text-align: center; }
+            .logo { width: 44px; height: 44px; border-radius: 8px; }
+            .title { font-size: 22px; font-weight: bold; color: #d32f2f; margin: 18px 0 8px; }
+            .status { font-size: 16px; margin: 18px 0; color: #333; }
+            .footer { margin-top: 32px; font-size: 12px; color: #888; text-align: center; }
+            .cancelled { color: #d32f2f; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <img src="${ LOGO_URL }" alt="Logo" class="logo" />
+              <div class="title">${ APP_NAME } Subscription Cancelled</div>
+            </div>
+            <div class="status">
+              <p>Hello,</p>
+              <p>Your subscription has been <span class="cancelled">cancelled</span>.</p>
+              <p>${ message }</p>
+              <p>If you have any questions or believe this was a mistake, please contact our support team.</p>
+            </div>
+            <div class="footer">
+              &copy; ${ new Date().getFullYear() } ${ APP_NAME }. All rights reserved.
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  };
+  await sgMail.send(msg);
+}
+
 
 /**
  * Send a "Contact Us" message via email using SendGrid
@@ -247,5 +363,7 @@ async function sendContactUs(to, title, messageData) {
 module.exports = {
   sendSms,
   sendOtp,
-  sendContactUs
+  sendContactUs,
+  sendEmailAccountActivation,
+  sendEmailCancelSubscription
 };

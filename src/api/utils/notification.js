@@ -51,13 +51,12 @@ const sendPushNotification = async (deviceToken, title, body, data = {}) => {
             },
         },
     };
-    console.log('message', message)
-    try {
-        const response = await admin.messaging().send(message);
-        console.log("Successfully sent message:", response);
-    } catch (error) {
-        console.error("Error sending message:", error);
-    }
+    // try {
+    const response = await admin.messaging().send(message);
+    console.log("Successfully sent message:", response);
+    // } catch (error) {
+    //     console.error("Error sending message:", error);
+    // }
 }
 
 /**
