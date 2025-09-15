@@ -117,7 +117,7 @@ exports.loginServices = async (req, res) => {
                             event_type: "logout"
                         }
                     );
-                    await Notification.sendFCMNotification(
+                    /*await Notification.sendFCMNotification(
                         token?.user.deviceToken,
                         "Login Successful",
                         `You have successfully logged in.`,
@@ -127,7 +127,7 @@ exports.loginServices = async (req, res) => {
                             event_type: "login",
                             link: ""
                         }
-                    );
+                    );*/
                     return {
                         status: 1,
                         message: 'User successfully logged in.',
