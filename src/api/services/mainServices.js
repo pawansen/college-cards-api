@@ -557,7 +557,7 @@ exports.getCouponServices = async (req, res) => {
                     logo: 1,
                     create_at: 1
                 }
-            ).skip(offset).limit(limits);
+            );
 
             // Add base path to logo
             data = data.map(async item => {
@@ -585,7 +585,7 @@ exports.getCouponServices = async (req, res) => {
                     logo: 1,
                     create_at: 1
                 }
-            ).skip(offset).limit(limits);
+            )
             // Add base path to logo
             // Add base path to logo
             data = data.map(async item => {
