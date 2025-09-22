@@ -1139,11 +1139,21 @@ exports.getUserServices = async (req, res) => {
         const { limit, pageNo } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
-        const data = await userSchema.find(
+        let data = await userSchema.find(
             { role: { $ne: 'admin' }, isDelete: false }
         ).sort({ createDate: -1 }).skip(offset).limit(limits);
 
         if (data.length > 0) {
+            // For each user, find their subscriptions and add as a new param
+            // Use map with Promise.all to fetch subscriptions for each user
+            data = await Promise.all(data.map(async (user) => {
+                const subscriptions = await UserSubscribeSchema.findOne(
+                    { user_id: user._id }
+                ).sort({ createdAt: -1 }).lean();
+
+                return { ...user.toObject?.() || user, subscriptions: subscriptions ? subscriptions?.status : 'Inactive' };
+            }));
+
             return {
                 status: 1,
                 message: 'Successfully listed.',
@@ -1653,26 +1663,66 @@ exports.getNotificationServices = async (req, res) => {
         const { limit, pageNo, keyword } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
-        const data = await notificationSchema.find(
+        // Aggregate to join notifications with users collection on user_id
+        const data = await notificationSchema.aggregate([
             {
-                ...(keyword && {
-                    $or: [
-                        { title: { $regex: keyword, $options: "i" } },
-                        { message: { $regex: keyword, $options: "i" } }
-                    ]
-                })
+                $match: {
+                    ...(keyword && {
+                        $or: [
+                            { title: { $regex: keyword, $options: "i" } },
+                            { message: { $regex: keyword, $options: "i" } }
+                        ]
+                    })
+                }
             },
             {
-                _id: 0,
-                "notification_id": "$_id",
-                title: 1,
-                message: 1,
-                type: 1,
-                entity_id: 1,
-                is_read: 1,
-                create_at: 1
+                $sort: { create_at: -1 }
+            },
+            { $skip: offset },
+            { $limit: limits },
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+            // Only include notifications where user.isDelete is false (if user exists)
+            {
+                $match: {
+                    $or: [
+                        { "user.isDelete": false },
+
+                    ]
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    notification_id: "$_id",
+                    title: 1,
+                    message: 1,
+                    type: 1,
+                    entity_id: 1,
+                    is_read: 1,
+                    create_at: 1,
+                    user: {
+                        _id: 1,
+                        firstName: 1,
+                        lastName: 1,
+                        email: 1,
+                        profileImage: 1
+                    }
+                }
             }
-        ).sort({ create_at: -1 }).skip(offset).limit(limits);
+        ]);
 
         if (data.length > 0) {
             return {
@@ -1936,9 +1986,100 @@ exports.getDashboardServices = async (req) => {
         // Get total packages
         const totalPackages = await packageSchema.countDocuments({});
         // Get total subscriptions
-        const totalSubscriptions = await UserSubscribeSchema.countDocuments({});
+        // Count total subscriptions where user is not deleted
+
+        // Count active subscriptions where user is not deleted
+        const totalActiveSubscriptionsAgg = await UserSubscribeSchema.aggregate([
+            {
+                $match: { status: "active" }
+            },
+            // Convert user_id to ObjectId for lookup
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
+            { $count: 'count' }
+        ]);
+
+        const totalActiveSubscriptions = totalActiveSubscriptionsAgg.length > 0 ? totalActiveSubscriptionsAgg[0].count : 0;
+        console.log(totalActiveSubscriptionsAgg)
+        // For now, assuming both are string:
+        const totalInactiveSubscriptionsAgg = await UserSubscribeSchema.aggregate([
+            {
+                $match: { status: { $ne: 'active' } }
+            },
+            // Convert user_id to ObjectId for lookup
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
+            { $count: 'count' }
+        ]);
+        console.log("totalInactiveSubscriptionsAgg", totalInactiveSubscriptionsAgg)
+        const totalInactiveSubscriptions = totalInactiveSubscriptionsAgg.length > 0 ? totalInactiveSubscriptionsAgg[0].count : 0;
+
+        // Count all subscriptions where user is not deleted
+        const totalSubscriptionsAgg = await UserSubscribeSchema.aggregate([
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
+            { $count: 'count' }
+        ]);
+        const totalSubscriptionsFinal = totalSubscriptionsAgg.length > 0 ? totalSubscriptionsAgg[0].count : 0;
+        const totalSubscriptions = totalSubscriptionsFinal;
+
+
         // Calculate the sum of all payment amounts
         const totalAmountResult = await UserPaymentsSchema.aggregate([
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
             { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
         ]);
         const totalAmount = totalAmountResult.length > 0 ? totalAmountResult[0].totalAmount : 0;
@@ -1957,7 +2098,9 @@ exports.getDashboardServices = async (req) => {
             totalAmount,
             totalPromoCodes,
             totalCities,
-            totalFeedbacks
+            totalFeedbacks,
+            totalActiveSubscriptions,
+            totalInactiveSubscriptions
         };
 
         return { status: 1, message: 'Successfully updated', data: data };
@@ -2076,13 +2219,48 @@ exports.getAllActiveSubscribeService = async (req, res) => {
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
 
         // Find all subscriptions for the user and join with package info
-        const activeSubscription = await UserSubscribeSchema.find(
-            {},
-            null,
-            { skip: offset, limit: limits }
-        )
-            .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email' })
-            .lean();
+        // Aggregate to inner join with users collection where isDelete is false
+        const activeSubscription = await UserSubscribeSchema.aggregate([
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
+            {
+                $project: {
+                    _id: 1,
+                    user_id: 1,
+                    package_id: 1,
+                    cityCount: 1,
+                    amount: 1,
+                    packageType: 1,
+                    startDate: 1,
+                    endDate: 1,
+                    status: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    city_ids: 1,
+                    user: {
+                        _id: 1,
+                        firstName: 1,
+                        lastName: 1,
+                        email: 1
+                    }
+                }
+            },
+            { $skip: offset },
+            { $limit: limits }
+        ]);
 
         // For each subscription, join cities info based on city_ids
         for (let sub of activeSubscription) {

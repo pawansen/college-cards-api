@@ -784,18 +784,18 @@ exports.userSubscribeServices = async (req, res) => {
         if (existingPackage) {
 
             // Check if user already has an active subscription
-            const activeSubscription = await UserSubscribeSchema.findOne({
-                user_id: _id,
-                status: { $in: ['active', 'cancelledUsedFullMonth'] },
-                endDate: { $gte: new Date() }
-            });
-            if (activeSubscription) {
-                return {
-                    status: 0,
-                    message: 'You already have an active subscription.',
-                    data: activeSubscription
-                };
-            }
+            // const activeSubscription = await UserSubscribeSchema.findOne({
+            //     user_id: _id,
+            //     status: { $in: ['active', 'cancelledUsedFullMonth'] },
+            //     endDate: { $gte: new Date() }
+            // });
+            // if (activeSubscription) {
+            //     return {
+            //         status: 0,
+            //         message: 'You already have an active subscription.',
+            //         data: activeSubscription
+            //     };
+            // }
             const existingUserCities = await userCitiesSchema.find({ user_id: _id });
             const cityCount = existingUserCities.length;
             const userCityIds = existingUserCities.map(item => item.city_id);
@@ -841,7 +841,7 @@ exports.userSubscribeServices = async (req, res) => {
                 await notificationSchema.create({
                     user_id: _id,
                     title: 'Subscription Successful',
-                    message: `You have successfully subscribed to the ${ existingPackage.title } package.`,
+                    message: `You have successfully subscribed to the ${ existingPackage.title } package amount $${ billingAmount }.`,
                     type: 'subscription',
                     entity_id: subscribeInfo._id,
                     is_read: false,
@@ -850,7 +850,7 @@ exports.userSubscribeServices = async (req, res) => {
                 await Notification.sendFCMNotification(
                     deviceToken,
                     "Subscription Successful",
-                    `You have successfully subscribed to the ${ existingPackage.title } package.`,
+                    `You have successfully subscribed to the ${ existingPackage.title } package amount $${ billingAmount }.`,
                     {
                         event_id: subscribeInfo._id,
                         user_id: _id,
@@ -884,26 +884,32 @@ exports.getUserSubscribeServices = async (req, res) => {
         const { _id } = req.User;
         // Fetch the user's active subscription
         // Check if user already has an active subscription
-        const activeSubscription = await UserSubscribeSchema.findOne({
+        const activeSubscriptions = await UserSubscribeSchema.find({
             user_id: _id,
             status: { $in: ['active', 'cancelledUsedFullMonth'] },
         });
-        if (activeSubscription) {
+        if (activeSubscriptions && activeSubscriptions.length > 0) {
             const cityInfo = {};
-            let userCity = await userCitiesSchema.find({ user_id: _id })
-            if (userCity.length > 0) {
-                cityInfo.city_ids = userCity.map(item => item.city_id);
-                const cities = await citiesSchema.find({ id: { $in: cityInfo.city_ids } });
-                cityInfo.cityList = cities.map(item => ({
-                    id: item.id,
-                    name: item.name,
-                }));
-            }
+            // let userCity = await userCitiesSchema.find({ user_id: _id })
+            const data = await Promise.all(
+                activeSubscriptions.map(async (sub) => {
+                    let cityList = [];
+                    if (sub.city_ids && sub.city_ids.length > 0) {
+                        cityList = await citiesSchema.find({ id: { $in: sub.city_ids } });
+                    }
+                    return {
+                        ...sub.toObject(),
+                        id: sub._id,
+                        city_ids: sub.city_ids,
+                        cities: cityList,
+                    };
+                })
+            );
 
             return {
                 status: 1,
                 message: 'Successfully listed.',
-                data: { ...activeSubscription.toObject(), id: activeSubscription._id, ...cityInfo }
+                data: data
             }
         } else {
             return { status: 0, message: 'You do not have an active subscription.' }
@@ -1287,11 +1293,13 @@ exports.deleteAccountServices = async (req, res) => {
             if (updateResult.modifiedCount > 0) {
                 // Delete all OAuth tokens for the current user after account deletion
                 await OAuthTokenSchema.deleteMany({ user_id: _id });
-                await UserSubscribeSchema.updateOne(
-                    { user_id: user._id, },
+                await UserSubscribeSchema.updateMany(
+                    { user_id: user._id },
                     {
-                        status: "inactive",
-                        endDate: { $gte: new Date() }
+                        $set: {
+                            status: "inactive",
+                            endDate: new Date()
+                        }
                     }
                 );
                 await Notification.sendFCMNotification(
