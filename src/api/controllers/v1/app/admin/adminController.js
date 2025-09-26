@@ -43,7 +43,8 @@ const {
     updatePromoCodeService,
     deleteFeedbackService,
     contactUsServices,
-    getVersionServices
+    getVersionServices,
+    deleteUserService
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -885,6 +886,20 @@ exports.deleteFeedbacksController = (req, res) => {
  */
 exports.contactUsController = (req, res) => {
     contactUsServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+exports.deleteUserController = (req, res) => {
+    deleteUserService(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

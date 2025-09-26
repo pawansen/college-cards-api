@@ -469,37 +469,56 @@ exports.getCouponServices = async (req, res) => {
         if (keyword) {
             query.$or = [
                 { title: { $regex: keyword, $options: 'i' } },
-                { amount: { $regex: keyword, $options: 'i' } }
+                { amount: { $regex: keyword, $options: 'i' } },
+                { "address.address": { $regex: keyword, $options: 'i' } },
+                { "city.name": { $regex: keyword, $options: 'i' } }, // search by city name
             ];
         }
-        let data = await couponSchema.find(
-            query,
+        // Aggregate to join with cities collection
+        let pipeline = [
             {
-                _id: 0,
-                "coupon_id": "$_id",
-                title: 1,
-                code: 1,
-                amount: 1,
-                amountType: 1,
-                description: 1,
-                city_id: 1,
-                address: 1,
-                logo: 1,
-                create_at: 1
-            }
-        ).skip(offset).limit(limits);
+                $addFields: {
+                    cityIdNum: { $toInt: "$city_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'cities',
+                    localField: 'cityIdNum',
+                    foreignField: 'id',
+                    as: 'city'
+                }
+            },
+            { $unwind: { path: "$city", preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    _id: 0,
+                    coupon_id: "$_id",
+                    title: 1,
+                    code: 1,
+                    amount: 1,
+                    amountType: 1,
+                    description: 1,
+                    city_id: 1,
+                    address: 1,
+                    logo: 1,
+                    create_at: 1,
+                    // "city.name": "$city.name",
+                    // "city.id": "$city.id", // Removed to prevent path collision
+                    city: { id: "$city.id", name: "$city.name" }
+                }
+            },
+            // $match must come after $project if you want to match on projected fields
+            { $match: query },
+            { $sort: { create_at: -1 } },
+            { $skip: offset },
+            { $limit: limits },
+        ];
+        let data = await couponSchema.aggregate(pipeline);
         // Add base path to logo
-        // Add base path to logo and get city info
         data = await Promise.all(data.map(async item => {
-            const obj = item.toObject();
+            const obj = { ...item };
             obj.logo = obj.logo ? env.UPLOAD_URL + obj.logo : null;
-            // Attach city info if city_id exists
-            if (obj.city_id) {
-                const city = await citiesSchema.findOne({ id: obj.city_id }, { id: 1, name: 1 });
-                obj.city = city ? { id: city.id, name: city.name } : null;
-            } else {
-                obj.city = null;
-            }
             return obj;
         }));
         if (data.length > 0) {
@@ -1140,18 +1159,27 @@ exports.getUserServices = async (req, res) => {
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
         let data = await userSchema.find(
-            { role: { $ne: 'admin' }, isDelete: false }
+            { role: { $ne: 'admin' } }
         ).sort({ createDate: -1 }).skip(offset).limit(limits);
-
         if (data.length > 0) {
             // For each user, find their subscriptions and add as a new param
             // Use map with Promise.all to fetch subscriptions for each user
             data = await Promise.all(data.map(async (user) => {
+                let status_text = 'Signup Completed';
                 const subscriptions = await UserSubscribeSchema.findOne(
                     { user_id: user._id }
                 ).sort({ createdAt: -1 }).lean();
-
-                return { ...user.toObject?.() || user, subscriptions: subscriptions ? subscriptions?.status : 'Inactive' };
+                if (subscriptions) {
+                    if (subscriptions.status === 'active') {
+                        status_text = 'Subscribed';
+                    } else if (subscriptions.status === 'expired') {
+                        status_text = 'Subscription Expired';
+                    }
+                }
+                if (user.isDelete) {
+                    status_text = 'Deleted';
+                }
+                return { ...user.toObject?.() || user, subscriptions: subscriptions ? subscriptions?.status : 'Inactive', status_text };
             }));
 
             return {
@@ -1981,12 +2009,46 @@ exports.getDashboardServices = async (req) => {
         let data = {};
         // Get total users (excluding admin)
         const totalUsers = await userSchema.countDocuments({ role: { $ne: 'admin' } });
+        const totalDeletedUsers = await userSchema.countDocuments({ role: { $ne: 'admin' }, isDelete: true });
+        const totalActiveUsers = await userSchema.countDocuments({ role: { $ne: 'admin' }, isDelete: false, isActive: true });
+        const totalInactiveUsers = await userSchema.countDocuments({ role: { $ne: 'admin' }, isDelete: false, isActive: false });
+
+        // Count users (excluding admin) who are NOT present in user_subscribes collection
+        const signupUsers = await userSchema.aggregate([
+            { $match: { role: { $ne: 'admin' } } },
+            {
+                $lookup: {
+                    from: 'usersubscribes',
+                    localField: '_id',
+                    foreignField: 'user_id',
+                    as: 'subscriptions'
+                }
+            },
+            { $match: { subscriptions: { $size: 0 } } },
+            { $count: 'count' }
+        ]);
+        const signupUsersCount = signupUsers.length > 0 ? signupUsers[0].count : 0;
+
+        // Count users (excluding admin) who ARE present in user_subscribes collection (i.e., have at least one subscription)
+        const signupUsersSub = await userSchema.aggregate([
+            { $match: { role: { $ne: 'admin' } } },
+            {
+                $lookup: {
+                    from: 'usersubscribes',
+                    localField: '_id',
+                    foreignField: 'user_id',
+                    as: 'subscriptions'
+                }
+            },
+            { $match: { "subscriptions.0": { $exists: true } } },
+            { $count: 'count' }
+        ]);
+        const allSubscribedUsersCount = signupUsersSub.length > 0 ? signupUsersSub[0].count : 0;
         // Get total coupons
         const totalCoupons = await couponSchema.countDocuments({});
         // Get total packages
         const totalPackages = await packageSchema.countDocuments({});
         // Get total subscriptions
-        // Count total subscriptions where user is not deleted
 
         // Count active subscriptions where user is not deleted
         const totalActiveSubscriptionsAgg = await UserSubscribeSchema.aggregate([
@@ -2013,32 +2075,6 @@ exports.getDashboardServices = async (req) => {
         ]);
 
         const totalActiveSubscriptions = totalActiveSubscriptionsAgg.length > 0 ? totalActiveSubscriptionsAgg[0].count : 0;
-        console.log(totalActiveSubscriptionsAgg)
-        // For now, assuming both are string:
-        const totalInactiveSubscriptionsAgg = await UserSubscribeSchema.aggregate([
-            {
-                $match: { status: { $ne: 'active' } }
-            },
-            // Convert user_id to ObjectId for lookup
-            {
-                $addFields: {
-                    userIdObj: { $toObjectId: "$user_id" }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'userIdObj',
-                    foreignField: '_id',
-                    as: 'user'
-                }
-            },
-            { $unwind: '$user' },
-            { $match: { 'user.isDelete': false } },
-            { $count: 'count' }
-        ]);
-        console.log("totalInactiveSubscriptionsAgg", totalInactiveSubscriptionsAgg)
-        const totalInactiveSubscriptions = totalInactiveSubscriptionsAgg.length > 0 ? totalInactiveSubscriptionsAgg[0].count : 0;
 
         // Count all subscriptions where user is not deleted
         const totalSubscriptionsAgg = await UserSubscribeSchema.aggregate([
@@ -2061,7 +2097,6 @@ exports.getDashboardServices = async (req) => {
         ]);
         const totalSubscriptionsFinal = totalSubscriptionsAgg.length > 0 ? totalSubscriptionsAgg[0].count : 0;
         const totalSubscriptions = totalSubscriptionsFinal;
-
 
         // Calculate the sum of all payment amounts
         const totalAmountResult = await UserPaymentsSchema.aggregate([
@@ -2090,17 +2125,144 @@ exports.getDashboardServices = async (req) => {
 
         const totalFeedbacks = await FeedbackSchema.countDocuments({});
 
+        // Count feedbacks that do not have any replies (self-join where no feedback exists with feedback_id = _id)
+        const totalReplayRemainingFeedbacks = await FeedbackSchema.countDocuments({
+            feedback_type: 'direct',
+            $expr: {
+                $not: [
+                    {
+                        $in: [
+                            "$_id",
+                            await FeedbackSchema.distinct("feedback_id", { feedback_type: "reply" })
+                        ]
+                    }
+                ]
+            }
+        });
+
+        // Count active subscriptions where user is not deleted
+        const totalInactiveSubscriptionsAgg = await UserSubscribeSchema.aggregate([
+            {
+                $match: { status: "inactive" }
+            },
+            // Convert user_id to ObjectId for lookup
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
+            { $count: 'count' }
+        ]);
+
+        const totalInactiveSubscriptions = totalInactiveSubscriptionsAgg.length > 0 ? totalInactiveSubscriptionsAgg[0].count : 0;
+
+        // Count active subscriptions where user is not deleted
+        const totalExpiredSubscriptionsAgg = await UserSubscribeSchema.aggregate([
+            {
+                $match: { status: "expired" }
+            },
+            // Convert user_id to ObjectId for lookup
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
+            { $count: 'count' }
+        ]);
+
+        const totalExpiredSubscriptions = totalExpiredSubscriptionsAgg.length > 0 ? totalExpiredSubscriptionsAgg[0].count : 0;
+
+        // Count active subscriptions where user is not deleted
+        const totalCancelledSubscriptionsAgg = await UserSubscribeSchema.aggregate([
+            {
+                $match: { status: "cancelled" }
+            },
+            // Convert user_id to ObjectId for lookup
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
+            { $count: 'count' }
+        ]);
+
+        const totalCancelledSubscriptions = totalCancelledSubscriptionsAgg.length > 0 ? totalCancelledSubscriptionsAgg[0].count : 0;
+
+        const totalSelfCancelledSubscriptionsAgg = await UserSubscribeSchema.aggregate([
+            {
+                $match: { status: "cancelledUsedFullMonth" }
+            },
+            // Convert user_id to ObjectId for lookup
+            {
+                $addFields: {
+                    userIdObj: { $toObjectId: "$user_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userIdObj',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            { $match: { 'user.isDelete': false } },
+            { $count: 'count' }
+        ]);
+
+        const totalSelfCancelledSubscriptionsCount = totalSelfCancelledSubscriptionsAgg.length > 0 ? totalSelfCancelledSubscriptionsAgg[0].count : 0;
+
         data = {
             totalUsers,
+            totalDeletedUsers,
+            totalActiveUsers,
+            totalInactiveUsers,
+            signupUsersCount,
             totalCoupons,
             totalPackages,
-            totalSubscriptions,
             totalAmount,
             totalPromoCodes,
             totalCities,
             totalFeedbacks,
+            totalReplayRemainingFeedbacks,
+            totalSubscriptions,
             totalActiveSubscriptions,
-            totalInactiveSubscriptions
+            totalInactiveSubscriptions,
+            allSubscribedUsersCount,
+            totalExpiredSubscriptions,
+            totalCancelledSubscriptions,
+            totalSelfCancelledSubscriptionsCount
         };
 
         return { status: 1, message: 'Successfully updated', data: data };
@@ -2220,6 +2382,37 @@ exports.getAllActiveSubscribeService = async (req, res) => {
 
         // Find all subscriptions for the user and join with package info
         // Aggregate to inner join with users collection where isDelete is false
+        // Build match conditions for keyword and date filtering
+        let matchConditions = [{ 'user.isDelete': false }];
+        if (keyward) {
+            matchConditions.push({
+                $or: [
+                    { 'user.firstName': { $regex: keyward, $options: 'i' } },
+                    { 'user.lastName': { $regex: keyward, $options: 'i' } },
+                    { 'user.email': { $regex: keyward, $options: 'i' } }
+                ]
+            });
+        }
+        if (req.query.fromDate && req.query.endDate) {
+            // Assuming fromDate and endDate are in YYYY-MM-DD format
+            const start = new Date(req.query.fromDate);
+            const end = new Date(req.query.endDate);
+            end.setHours(23, 59, 59, 999);
+            matchConditions.push({
+                $or: [
+                    {
+                        startDate: { $gte: start, $lte: end }
+                    },
+                    {
+                        endDate: { $gte: start, $lte: end }
+                    }
+                ]
+            });
+        }
+
+
+        console.log('matchConditions', matchConditions)
+
         const activeSubscription = await UserSubscribeSchema.aggregate([
             {
                 $addFields: {
@@ -2235,7 +2428,11 @@ exports.getAllActiveSubscribeService = async (req, res) => {
                 }
             },
             { $unwind: '$user' },
-            { $match: { 'user.isDelete': false } },
+            {
+                $match: matchConditions.length > 1
+                    ? { $and: matchConditions }
+                    : matchConditions[0]
+            },
             {
                 $project: {
                     _id: 1,
@@ -2258,6 +2455,7 @@ exports.getAllActiveSubscribeService = async (req, res) => {
                     }
                 }
             },
+            { $sort: { createdAt: -1 } },
             { $skip: offset },
             { $limit: limits }
         ]);
@@ -2357,5 +2555,30 @@ exports.contactUsServices = async (req, res) => {
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteUserService = async (req) => {
+    try {
+        let { user_id } = req.body;
+        // Delete user by user_id
+        let deletedUser;
+        if (typeof user_id === 'string') {
+            deletedUser = await userSchema.findOneAndDelete({ _id: user_id });
+        } else if (Array.isArray(user_id)) {
+            deletedUser = await userSchema.deleteMany({ _id: { $in: user_id } });
+        }
+        if (deletedUser) {
+            return { status: 1, message: 'User deleted successfully.' };
+        } else {
+            return { status: 0, message: 'User not found.' };
+        }
+    } catch (err) {
+        return err
     }
 }

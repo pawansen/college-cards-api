@@ -17,7 +17,7 @@ const PackageSchema = new Schema({
     },
     packageType: {
         type: String,
-        enum: ['monthly', 'yearly'],
+        enum: ['monthly', 'yearly', 'day', 'week'],
         required: false
     },
     isActive: {

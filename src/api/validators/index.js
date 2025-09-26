@@ -239,7 +239,7 @@ const addFeedback = Joi.object({
 const addPackage = Joi.object({
   cityCount: Joi.number().required(),
   amount: Joi.number().required(),
-  packageType: Joi.string().valid('monthly', 'yearly').required(),
+  packageType: Joi.string().valid('monthly', 'yearly', 'day', 'week').required(),
   title: Joi.string().allow('').optional(),
   status: Joi.string().allow('').optional(),
   Authorization: Joi.string().allow('').optional(),
@@ -248,7 +248,7 @@ const addPackage = Joi.object({
 const updatePackage = Joi.object({
   package_id: Joi.string().required(),
   amount: Joi.number().required(),
-  packageType: Joi.string().valid('monthly', 'yearly').required(),
+  packageType: Joi.string().valid('monthly', 'yearly', 'day', 'week').required(),
   title: Joi.string().allow('').optional(),
   status: Joi.string().allow('').optional(),
   Authorization: Joi.string().allow('').optional(),

@@ -29,7 +29,8 @@ const Validator = require('../../middlewares/validator'),
         getPromoCodeInfoController,
         deleteFeedbacksController,
         contactUsController,
-        getVersionController
+        getVersionController,
+        deleteUserController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -342,6 +343,14 @@ class AdminRoutes {
         this.app.post(
             '/v1/admin/contact-us',
             contactUsController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/delete-user',
+            verifyTokenAdmin,
+            Validator('getUserProfile'),
+            deleteUserController
         )
 
     }
