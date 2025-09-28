@@ -26,7 +26,8 @@ const {
     getContentServices,
     getValidateInfoServices,
     cancelMembershipServices,
-    contactUsServices
+    contactUsServices,
+    getRestaurantsLogoListServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -557,6 +558,25 @@ exports.getValidateInfoController = (req, res) => {
  */
 exports.cancelMembershipController = (req, res) => {
     cancelMembershipServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getRestaurantsLogoListController = (req, res) => {
+    getRestaurantsLogoListServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

@@ -16,6 +16,16 @@ const versionSchema = new Schema(
             enum: ['yes', 'no'],
             default: 'no',
         },
+        forcePopupAndroid: {
+            type: String,
+            enum: ['yes', 'no'],
+            default: 'no',
+        },
+        forcePopupIos: {
+            type: String,
+            enum: ['yes', 'no'],
+            default: 'no',
+        },
         androidVersion: {
             type: String,
             required: false,

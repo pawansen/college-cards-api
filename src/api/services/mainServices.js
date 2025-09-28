@@ -25,6 +25,7 @@ const bcrypt = require('bcrypt'),
     VersionSchema = require('../domain/schema/mongoose/version.schema'),
     Notification = require('../utils/notification'),
     contentSchema = require('../domain/schema/mongoose/content.schema'),
+    LandingLogoRestaurantsSchema = require('../domain/schema/mongoose/landing.logo.restaurents.schema'),
     { sendSms, sendOtp, sendContactUs, sendEmailCancelSubscription } = require('../lib/sms'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response;
@@ -1477,6 +1478,100 @@ exports.cancelMembershipServices = async (req, res) => {
             return { status: 0, message: 'Membership not found.' };
         }
 
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getRestaurantsLogoListServices = async (req, res) => {
+    try {
+        const { city_id, keyword, limit, pageNo, is_display_nine, is_featured } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+        // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
+        let query = { status: true };
+        if (city_id) {
+            // Support multiple city_id values, comma separated
+            const cityIds = city_id.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            if (cityIds.length > 1) {
+                query.city_id = { $in: cityIds };
+            } else if (cityIds.length === 1) {
+                query.city_id = cityIds[0];
+            }
+        }
+        if (is_display_nine) {
+            query.is_display_nine = is_display_nine;
+        }
+        if (is_featured) {
+            query.is_featured = is_featured;
+        }
+        if (keyword) {
+            query.$or = [
+                { title: { $regex: keyword, $options: 'i' } },
+                { "city.name": { $regex: keyword, $options: 'i' } }, // search by city name
+            ];
+        }
+        console.log(query);
+        // Aggregate to join with cities collection
+        let pipeline = [
+            {
+                $addFields: {
+                    cityIdNum: { $toInt: "$city_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'cities',
+                    localField: 'cityIdNum',
+                    foreignField: 'id',
+                    as: 'city'
+                }
+            },
+            { $unwind: { path: "$city", preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    _id: 0,
+                    logo_id: "$_id",
+                    title: 1,
+                    description: 1,
+                    city_id: 1,
+                    is_display_nine: 1,
+                    is_featured: 1,
+                    logo: 1,
+                    create_at: 1,
+                    // "city.name": "$city.name",
+                    // "city.id": "$city.id", // Removed to prevent path collision
+                    city: { id: "$city.id", name: "$city.name" }
+                }
+            },
+            // $match must come after $project if you want to match on projected fields
+            { $match: query },
+            { $sort: { is_featured: -1, create_at: -1 } },
+            { $skip: offset },
+            { $limit: limits },
+        ];
+        let data = await LandingLogoRestaurantsSchema.aggregate(pipeline);
+        // Add base path to logo
+        data = await Promise.all(data.map(async item => {
+            const obj = { ...item };
+            obj.logo = obj.logo ? env.UPLOAD_URL + obj.logo : null;
+            return obj;
+        }));
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
     } catch (err) {
         console.log(err)
         return { status: 0, message: err }

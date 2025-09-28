@@ -8,7 +8,7 @@ const Validator = require('../../middlewares/validator'),
         getPaymentHistoryController, getRefreshTokenController, getReferralController, getNotificationController, getUserFeedbackController,
         getVersionController, contactUsController,
         forgotPasswordController, verifyOtpController, deleteAccountController, getContentController, getValidateInfoController,
-        cancelMembershipController
+        cancelMembershipController, getRestaurantsLogoListController
     } = require('../../controllers/v1/app/main/mainController'),
     { getCountriesController } = require('../../controllers/v1/app/admin/adminController');
 
@@ -207,6 +207,18 @@ class MainRoutes {
         this.app.get(
             '/v1/countries',
             getCountriesController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-restaurants-logo-list',
+            getRestaurantsLogoListController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-cities',
+            citiesController
         )
 
     }

@@ -44,7 +44,12 @@ const {
     deleteFeedbackService,
     contactUsServices,
     getVersionServices,
-    deleteUserService
+    deleteUserService,
+    updateLogoRestaurentsServices,
+    addLogoRestaurentsServices,
+    getLogoRestaurentsInfoServices,
+    deleteLogoRestaurentsServices,
+    getLogoRestaurentsServices
 } = require('../../../../services/adminService'),
     {
         ErrorResponse,
@@ -900,6 +905,96 @@ exports.contactUsController = (req, res) => {
 
 exports.deleteUserController = (req, res) => {
     deleteUserService(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addLogoRestaurentsController = (req, res) => {
+    if (req.body.logo_id) {
+        updateLogoRestaurentsServices(req)
+            .then((response) => {
+                if (response.status) {
+                    SuccessResponse(res, response.message, response.data)
+                } else {
+                    ErrorResponse(res, response.message)
+                }
+            })
+            .catch((err) => {
+                ErrorResponse(res, err.message)
+            })
+    } else {
+        addLogoRestaurentsServices(req)
+            .then((response) => {
+                if (response.status) {
+                    SuccessResponse(res, response.message, response.data)
+                } else {
+                    ErrorResponse(res, response.message)
+                }
+            })
+            .catch((err) => {
+                ErrorResponse(res, err.message)
+            })
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getLogoRestaurentsController = (req, res) => {
+    getLogoRestaurentsServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getLogoRestaurentsInfoController = (req, res) => {
+    getLogoRestaurentsInfoServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteLogoRestaurentsController = (req, res) => {
+    deleteLogoRestaurentsServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

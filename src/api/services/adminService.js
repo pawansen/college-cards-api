@@ -27,6 +27,7 @@ const bcrypt = require('bcrypt'),
     PromoCodeSchema = require('../domain/schema/mongoose/promoCode.schema'),
     contentSchema = require('../domain/schema/mongoose/content.schema'),
     Notification = require('../utils/notification'),
+    LandingLogoRestaurantsSchema = require('../domain/schema/mongoose/landing.logo.restaurents.schema'),
     Request = OAuth2Server.Request,
     Response = OAuth2Server.Response,
     { sendSms, sendOtp, sendContactUs, sendEmailAccountActivation } = require('../lib/sms');
@@ -1517,12 +1518,12 @@ exports.getFeedbackInfoServices = async (req, res) => {
  */
 exports.updateVersionServices = async (req) => {
     try {
-        let { androidVersion, isCompulsoryUpdateAndroid, iosVersion, androidVersionPrev, iosVersionPrev, isCompulsoryUpdateIos } = req.body
+        let { androidVersion, isCompulsoryUpdateAndroid, iosVersion, androidVersionPrev, iosVersionPrev, isCompulsoryUpdateIos, forcePopupAndroid, forcePopupIos } = req.body
         // Save feedback to the database
         // Always update the single version record (assume only one document exists)
         await VersionSchema.updateOne(
             {}, // empty filter to match any document
-            { $set: { androidVersion, iosVersion, isCompulsoryUpdateAndroid, isCompulsoryUpdateIos, androidVersionPrev, iosVersionPrev } },
+            { $set: { androidVersion, iosVersion, isCompulsoryUpdateAndroid, isCompulsoryUpdateIos, androidVersionPrev, iosVersionPrev, forcePopupAndroid, forcePopupIos } },
             { upsert: true } // insert if not exists
         );
         return { status: 1, message: 'Version updated successfully.' };
@@ -1694,16 +1695,6 @@ exports.getNotificationServices = async (req, res) => {
         // Aggregate to join notifications with users collection on user_id
         const data = await notificationSchema.aggregate([
             {
-                $match: {
-                    ...(keyword && {
-                        $or: [
-                            { title: { $regex: keyword, $options: "i" } },
-                            { message: { $regex: keyword, $options: "i" } }
-                        ]
-                    })
-                }
-            },
-            {
                 $sort: { create_at: -1 }
             },
             { $skip: offset },
@@ -1748,6 +1739,19 @@ exports.getNotificationServices = async (req, res) => {
                         email: 1,
                         profileImage: 1
                     }
+                }
+            },
+            {
+                $match: {
+                    ...(keyword && {
+                        $or: [
+                            { title: { $regex: keyword, $options: "i" } },
+                            { message: { $regex: keyword, $options: "i" } },
+                            { "user.firstName": { $regex: keyword, $options: "i" } },
+                            { "user.lastName": { $regex: keyword, $options: "i" } },
+                            { "user.email": { $regex: keyword, $options: "i" } }
+                        ]
+                    })
                 }
             }
         ]);
@@ -2578,6 +2582,252 @@ exports.deleteUserService = async (req) => {
         } else {
             return { status: 0, message: 'User not found.' };
         }
+    } catch (err) {
+        return err
+    }
+}
+
+
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.addLogoRestaurentsServices = async (req) => {
+    try {
+        let { body, file } = req;
+        let payload = {
+            title: body.title,
+            description: body.description,
+            city_id: body.city_id,
+            logo: file ? "/uploads/restaurent/" + file.filename : null,
+            status: body.status || false,
+            is_display_nine: body.is_display_nine || "no",
+            is_featured: body.is_featured || "no",
+            status: body?.status || false
+        }
+        // Create new user
+        const newUser = new LandingLogoRestaurantsSchema(payload);
+        const savedUser = await newUser.save();
+        return { status: 1, message: 'Successfully added', data: { ...savedUser.toObject(), id: savedUser._id, logo: env.UPLOAD_URL + savedUser.logo } };
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getLogoRestaurentsServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const { city_id, keyword, limit, pageNo } = req.query;
+        const limits = limit ? parseInt(limit) : 10
+        const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
+        // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
+        let query = {};
+        if (city_id) {
+            query.city_id = city_id;
+        }
+        if (keyword) {
+            query.$or = [
+                { title: { $regex: keyword, $options: 'i' } },
+                { "city.name": { $regex: keyword, $options: 'i' } }, // search by city name
+            ];
+        }
+        // Aggregate to join with cities collection
+        let pipeline = [
+            {
+                $addFields: {
+                    cityIdNum: { $toInt: "$city_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'cities',
+                    localField: 'cityIdNum',
+                    foreignField: 'id',
+                    as: 'city'
+                }
+            },
+            { $unwind: { path: "$city", preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    _id: 0,
+                    logo_id: "$_id",
+                    title: 1,
+                    description: 1,
+                    city_id: 1,
+                    is_display_nine: 1,
+                    is_featured: 1,
+                    logo: 1,
+                    create_at: 1,
+                    status: 1,
+                    // "city.name": "$city.name",
+                    // "city.id": "$city.id", // Removed to prevent path collision
+                    city: { id: "$city.id", name: "$city.name" }
+                }
+            },
+            // $match must come after $project if you want to match on projected fields
+            { $match: query },
+            { $sort: { create_at: -1 } },
+            { $skip: offset },
+            { $limit: limits },
+        ];
+        let data = await LandingLogoRestaurantsSchema.aggregate(pipeline);
+        // Add base path to logo
+        data = await Promise.all(data.map(async item => {
+            const obj = { ...item };
+            obj.logo = obj.logo ? env.UPLOAD_URL + obj.logo : null;
+            return obj;
+        }));
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data,
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
+exports.getLogoRestaurentsInfoServices = async (req, res) => {
+    try {
+        const { logo_id } = req.query;
+        let query = {};
+        if (!logo_id) {
+            return { status: 0, message: 'Logo ID is required' };
+        }
+        if (logo_id) {
+            query._id = logo_id;
+        }
+        let data = await LandingLogoRestaurantsSchema.find(
+            query,
+            {
+                _id: 0,
+                "logo_id": "$_id",
+                title: 1,
+                description: 1,
+                city_id: 1,
+                logo: 1,
+                is_display_nine: 1,
+                is_featured: 1,
+                create_at: 1,
+                status: 1,
+            }
+        );
+        // Add base path to logo
+        // Add base path to logo and get city info
+        data = await Promise.all(data.map(async item => {
+            const obj = item.toObject();
+            obj.logo = obj.logo ? env.UPLOAD_URL + obj.logo : null;
+            // Attach city info if city_id exists
+            if (obj.city_id) {
+                const city = await citiesSchema.findOne({ id: obj.city_id }, { id: 1, name: 1 });
+                obj.city = city ? { id: city.id, name: city.name } : null;
+            } else {
+                obj.city = null;
+            }
+            return obj;
+        }));
+        if (data.length > 0) {
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: data[0],
+            }
+        } else {
+            return { status: 0, message: 'Records not found' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.deleteLogoRestaurentsServices = async (req) => {
+    try {
+        let { body } = req;
+        // Delete coupon by code and city_id
+        let deletedCoupon;
+        let couponIds = [];
+        if (typeof body.logo_id === 'string') {
+            couponIds = body.logo_id.split(',').map(id => id.trim()).filter(Boolean);
+        } else if (Array.isArray(body.logo_id)) {
+            couponIds = body.logo_id;
+        } else if (body.logo_id) {
+            couponIds = [body.logo_id];
+        }
+        console.log(couponIds)
+        if (couponIds.length > 1) {
+            deletedCoupon = await LandingLogoRestaurantsSchema.deleteMany({
+                _id: { $in: couponIds },
+            });
+        } else if (couponIds.length === 1) {
+            deletedCoupon = await LandingLogoRestaurantsSchema.findOneAndDelete({
+                _id: couponIds[0],
+            });
+        } else {
+            deletedCoupon = null;
+        }
+
+        if (deletedCoupon) {
+            return { status: 1, message: 'Logo deleted successfully.' };
+        } else {
+            return { status: 0, message: 'Logo not found.' };
+        }
+    } catch (err) {
+        return err
+    }
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.updateLogoRestaurentsServices = async (req) => {
+    try {
+        let { body, file } = req;
+
+        let payload = {
+            title: body.title,
+            city_id: body.city_id,
+            description: body.description,
+            status: body.status || false,
+            is_display_nine: body.is_display_nine || "no",
+            is_featured: body.is_featured || "no",
+            status: body?.status || false
+        }
+        if (file) {
+            // If a new file is uploaded, set the logo path
+            payload.logo = "/uploads/coupon/" + file.filename;
+        }
+        // Check if user with email or mobile already exists
+        // Update the coupon by _id
+        await LandingLogoRestaurantsSchema.updateOne(
+            { _id: body.coupon_id },
+            { $set: payload }
+        );
+        return { status: 1, message: 'Logo updated successfully.' };
     } catch (err) {
         return err
     }

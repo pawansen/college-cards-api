@@ -30,7 +30,11 @@ const Validator = require('../../middlewares/validator'),
         deleteFeedbacksController,
         contactUsController,
         getVersionController,
-        deleteUserController
+        deleteUserController,
+        addLogoRestaurentsController,
+        getLogoRestaurentsController,
+        getLogoRestaurentsInfoController,
+        deleteLogoRestaurentsController
     } = require('../../controllers/v1/app/admin/adminController')
 
 class AdminRoutes {
@@ -351,6 +355,38 @@ class AdminRoutes {
             verifyTokenAdmin,
             Validator('getUserProfile'),
             deleteUserController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/add-logo-restaurents',
+            verifyTokenAdmin,
+            Upload('restaurent').single('restaurentLogo'),
+            Validator('addRestaurentLogo'),
+            addLogoRestaurentsController
+        )
+
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-logo-restaurents',
+            verifyTokenAdmin,
+            getLogoRestaurentsController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-logo-restaurents-info',
+            verifyTokenAdmin,
+            getLogoRestaurentsInfoController
+        )
+
+        /** apis */
+        this.app.post(
+            '/v1/admin/delete-logo-restaurents',
+            verifyTokenAdmin,
+            Validator('deleteLogoRestaurents'),
+            deleteLogoRestaurentsController
         )
 
     }

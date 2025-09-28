@@ -214,8 +214,27 @@ const addCouponAdmin = Joi.object({
   coupon_id: Joi.string().allow('').optional(),
 })
 
+const addRestaurentLogo = Joi.object({
+  title: Joi.string().required(),
+  description: Joi.string().allow('').optional(),
+  city_id: Joi.number().required(),
+  is_display_nine: Joi.string().valid('yes', 'no').optional(),
+  is_featured: Joi.string().valid('yes', 'no').optional(),
+  status: Joi.boolean().allow('').optional(),
+  // logo: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+  restaurentLogo: Joi.string().allow('').optional(),
+  logo_id: Joi.string().allow('').optional(),
+})
+
+
 const deleteCouponAdmin = Joi.object({
   coupon_id: Joi.string().required(),
+  Authorization: Joi.string().allow('').optional(),
+})
+
+const deleteLogoRestaurents = Joi.object({
+  logo_id: Joi.string().required(),
   Authorization: Joi.string().allow('').optional(),
 })
 
@@ -282,6 +301,8 @@ const updateVersion = Joi.object({
   iosVersion: Joi.number().required(),
   iosVersionPrev: Joi.number().required(),
   isCompulsoryUpdateIos: Joi.string().valid('yes', 'no').required(),
+  forcePopupAndroid: Joi.string().valid('yes', 'no').required(),
+  forcePopupIos: Joi.string().valid('yes', 'no').required(),
   Authorization: Joi.string().allow('').optional(),
 })
 
@@ -409,5 +430,7 @@ module.exports = {
   getVehicleInfoPredction,
   getModelList,
   addVehicleModelController,
-  deleteNotificationsAdmin
+  deleteNotificationsAdmin,
+  addRestaurentLogo,
+  deleteLogoRestaurents
 }
