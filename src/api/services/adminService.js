@@ -2819,12 +2819,12 @@ exports.updateLogoRestaurentsServices = async (req) => {
         }
         if (file) {
             // If a new file is uploaded, set the logo path
-            payload.logo = "/uploads/coupon/" + file.filename;
+            payload.logo = "/uploads/restaurent/" + file.filename;
         }
         // Check if user with email or mobile already exists
-        // Update the coupon by _id
+        // Update the restaurant by _id
         await LandingLogoRestaurantsSchema.updateOne(
-            { _id: body.coupon_id },
+            { _id: body.logo_id },
             { $set: payload }
         );
         return { status: 1, message: 'Logo updated successfully.' };
