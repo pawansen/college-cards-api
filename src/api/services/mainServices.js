@@ -1520,15 +1520,11 @@ exports.getRestaurantsLogoListServices = async (req, res) => {
         console.log(query);
         // Aggregate to join with cities collection
         let pipeline = [
-            {
-                $addFields: {
-                    cityIdNum: { $toInt: "$city_id" }
-                }
-            },
+            { $match: query },
             {
                 $lookup: {
                     from: 'cities',
-                    localField: 'cityIdNum',
+                    localField: 'city_id',
                     foreignField: 'id',
                     as: 'city'
                 }
@@ -1545,13 +1541,10 @@ exports.getRestaurantsLogoListServices = async (req, res) => {
                     is_featured: 1,
                     logo: 1,
                     create_at: 1,
-                    // "city.name": "$city.name",
-                    // "city.id": "$city.id", // Removed to prevent path collision
                     city: { id: "$city.id", name: "$city.name" }
                 }
             },
             // $match must come after $project if you want to match on projected fields
-            { $match: query },
             { $sort: { is_featured: -1, create_at: -1 } },
             { $skip: offset },
             { $limit: limits },
