@@ -295,11 +295,11 @@ const getFeedbackInfo = Joi.object({
 })
 
 const updateVersion = Joi.object({
-  androidVersion: Joi.number().required(),
-  androidVersionPrev: Joi.number().required(),
+  androidVersion: Joi.string().required(),
+  androidVersionPrev: Joi.string().required(),
   isCompulsoryUpdateAndroid: Joi.string().valid('yes', 'no').required(),
-  iosVersion: Joi.number().required(),
-  iosVersionPrev: Joi.number().required(),
+  iosVersion: Joi.string().required(),
+  iosVersionPrev: Joi.string().required(),
   isCompulsoryUpdateIos: Joi.string().valid('yes', 'no').required(),
   forcePopupAndroid: Joi.string().valid('yes', 'no').required(),
   forcePopupIos: Joi.string().valid('yes', 'no').required(),
