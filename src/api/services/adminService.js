@@ -1521,11 +1521,24 @@ exports.updateVersionServices = async (req) => {
         let { androidVersion, isCompulsoryUpdateAndroid, iosVersion, androidVersionPrev, iosVersionPrev, isCompulsoryUpdateIos, forcePopupAndroid, forcePopupIos } = req.body
         // Save feedback to the database
         // Always update the single version record (assume only one document exists)
-        await VersionSchema.updateOne(
-            {}, // empty filter to match any document
-            { $set: { androidVersion, iosVersion, isCompulsoryUpdateAndroid, isCompulsoryUpdateIos, androidVersionPrev, iosVersionPrev, forcePopupAndroid, forcePopupIos } },
-            { upsert: true } // insert if not exists
-        );
+        // Build update payload only with non-empty params
+        const updatePayload = {};
+        if (androidVersion !== undefined && androidVersion !== null && androidVersion !== '') updatePayload.androidVersion = androidVersion;
+        if (isCompulsoryUpdateAndroid !== undefined && isCompulsoryUpdateAndroid !== null && isCompulsoryUpdateAndroid !== '') updatePayload.isCompulsoryUpdateAndroid = isCompulsoryUpdateAndroid;
+        if (iosVersion !== undefined && iosVersion !== null && iosVersion !== '') updatePayload.iosVersion = iosVersion;
+        if (androidVersionPrev !== undefined && androidVersionPrev !== null && androidVersionPrev !== '') updatePayload.androidVersionPrev = androidVersionPrev;
+        if (iosVersionPrev !== undefined && iosVersionPrev !== null && iosVersionPrev !== '') updatePayload.iosVersionPrev = iosVersionPrev;
+        if (isCompulsoryUpdateIos !== undefined && isCompulsoryUpdateIos !== null && isCompulsoryUpdateIos !== '') updatePayload.isCompulsoryUpdateIos = isCompulsoryUpdateIos;
+        if (forcePopupAndroid !== undefined && forcePopupAndroid !== null && forcePopupAndroid !== '') updatePayload.forcePopupAndroid = forcePopupAndroid;
+        if (forcePopupIos !== undefined && forcePopupIos !== null && forcePopupIos !== '') updatePayload.forcePopupIos = forcePopupIos;
+
+        if (Object.keys(updatePayload).length > 0) {
+            await VersionSchema.updateOne(
+                {}, // empty filter to match any document
+                { $set: updatePayload },
+                { upsert: true } // insert if not exists
+            );
+        }
         return { status: 1, message: 'Version updated successfully.' };
     } catch (err) {
         return err

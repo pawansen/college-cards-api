@@ -15,6 +15,14 @@ const UserSubscribeSchema = new Schema({
         type: String,
         required: false
     },
+    promo_code: {
+        type: String,
+        required: false
+    },
+    promo_amount: {
+        type: Number,
+        required: false
+    },
     cityCount: {
         type: Number,
         required: true
@@ -48,7 +56,7 @@ const UserSubscribeSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'inactive', 'cancelled', 'expired', 'cancelledUsedFullMonth'],
+        enum: ['active', 'inactive', 'cancelled', 'expired', 'cancelledUsedFullMonth', 'free'],
         required: true,
         default: 'active'
     },

@@ -25,6 +25,7 @@ const bcrypt = require('bcrypt'),
     VersionSchema = require('../domain/schema/mongoose/version.schema'),
     Notification = require('../utils/notification'),
     contentSchema = require('../domain/schema/mongoose/content.schema'),
+    PromoCodeSchema = require('../domain/schema/mongoose/promoCode.schema'),
     LandingLogoRestaurantsSchema = require('../domain/schema/mongoose/landing.logo.restaurents.schema'),
     { sendSms, sendOtp, sendContactUs, sendEmailCancelSubscription } = require('../lib/sms'),
     Request = OAuth2Server.Request,
@@ -94,7 +95,8 @@ exports.loginServices = async (req, res) => {
                             packageType: activeSubscription.packageType,
                             startDate: activeSubscription.startDate,
                             endDate: activeSubscription.endDate,
-                            status: activeSubscription.status
+                            status: activeSubscription.status,
+                            promo_code: activeSubscription.promo_code || null,
                         };
                     }
                     await userSchema.updateOne(
@@ -242,6 +244,7 @@ exports.registerServices = async (req, res) => {
                         isSubscribed: false,
                         city_ids: [],
                         subscription: null,
+                        promo_code: null,
                         cityList: []
                     };
                     await Notification.sendFCMNotification(
@@ -777,11 +780,21 @@ exports.getPackageServices = async (req, res) => {
 exports.userSubscribeServices = async (req, res) => {
     try {
         const { _id, deviceToken } = req.User;
-        const { package_id } = req.body;
+        const { package_id, promo_code } = req.body;
         const existingPackage = await packageSchema.findOne(
             { _id: package_id },
             { _id: 0, "package_id": "$_id", title: 1, cityCount: 1, amount: 1, packageType: 1, isActive: 1 }
         );
+        let promoAmount = 0;
+        if (promo_code) {
+            // Find promo code in PromoCodeSchema
+            const promo = await PromoCodeSchema.findOne({ code: promo_code });
+            if (!promo) {
+                return { status: 0, message: 'Invalid promo code.' };
+            }
+            promoAmount = promo.amount;
+            // Optionally, you can check for promo code expiry, usage, etc. here
+        }
         if (existingPackage) {
 
             // Check if user already has an active subscription
@@ -818,8 +831,10 @@ exports.userSubscribeServices = async (req, res) => {
                 amount: billingAmount,
                 packageType: existingPackage.packageType,
                 startDate: new Date(),
+                promo_code: promo_code || null,
+                promo_amount: promoAmount,
                 endDate: endDate,
-                status: 'active'
+                status: promoAmount == billingAmount ? 'free' : 'active'
             });
             if (subscribeInfo) {
                 // Create a payment record for the subscription
@@ -827,7 +842,7 @@ exports.userSubscribeServices = async (req, res) => {
                     user_id: _id,
                     package_id: package_id,
                     subscription_id: subscribeInfo._id, // This can be updated later if needed
-                    amount: billingAmount,
+                    amount: promoAmount == billingAmount ? 0 : billingAmount,
                     currency: 'USD', // Assuming USD, can be changed based on requirements
                     paymentMethod: 'manual', // Assuming manual payment, can be changed based on requirements
                     transactionId: null, // This can be updated later if needed

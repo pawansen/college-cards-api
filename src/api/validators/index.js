@@ -275,6 +275,7 @@ const updatePackage = Joi.object({
 
 const userSubscribe = Joi.object({
   package_id: Joi.string().required(),
+  promo_code: Joi.string().allow('').optional(),
   Authorization: Joi.string().allow('').optional(),
 })
 
@@ -295,14 +296,14 @@ const getFeedbackInfo = Joi.object({
 })
 
 const updateVersion = Joi.object({
-  androidVersion: Joi.string().required(),
-  androidVersionPrev: Joi.string().required(),
-  isCompulsoryUpdateAndroid: Joi.string().valid('yes', 'no').required(),
-  iosVersion: Joi.string().required(),
-  iosVersionPrev: Joi.string().required(),
-  isCompulsoryUpdateIos: Joi.string().valid('yes', 'no').required(),
-  forcePopupAndroid: Joi.string().valid('yes', 'no').required(),
-  forcePopupIos: Joi.string().valid('yes', 'no').required(),
+  androidVersion: Joi.string().optional(),
+  androidVersionPrev: Joi.string().optional(),
+  isCompulsoryUpdateAndroid: Joi.string().valid('yes', 'no').optional(),
+  iosVersion: Joi.string().optional(),
+  iosVersionPrev: Joi.string().optional(),
+  isCompulsoryUpdateIos: Joi.string().valid('yes', 'no').optional(),
+  forcePopupAndroid: Joi.string().valid('yes', 'no').optional(),
+  forcePopupIos: Joi.string().valid('yes', 'no').optional(),
   Authorization: Joi.string().allow('').optional(),
 })
 
