@@ -842,7 +842,7 @@ exports.userSubscribeServices = async (req, res) => {
                     user_id: _id,
                     package_id: package_id,
                     subscription_id: subscribeInfo._id, // This can be updated later if needed
-                    amount: promoAmount == billingAmount ? 0 : billingAmount,
+                    amount: billingAmount,
                     currency: 'USD', // Assuming USD, can be changed based on requirements
                     paymentMethod: 'manual', // Assuming manual payment, can be changed based on requirements
                     transactionId: null, // This can be updated later if needed

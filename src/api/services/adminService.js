@@ -1420,7 +1420,7 @@ exports.addFeedbackReplayServices = async (req) => {
  */
 exports.getFeedbackServices = async (req, res) => {
     try {
-        const { limit, pageNo, date, keyword } = req.query;
+        const { limit, pageNo, date, keyword, user_id } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
         // Find all subscriptions for the user and join with package info
@@ -1440,6 +1440,9 @@ exports.getFeedbackServices = async (req, res) => {
                 { description: { $regex: keyword, $options: 'i' } },
                 // Optionally search in user's name/email if needed
             ];
+        }
+        if (user_id) {
+            filter.user_id = user_id;
         }
         const activeSubscription = await FeedbackSchema.find(filter)
             .populate({ path: 'user_id', model: 'users', select: 'firstName lastName email profileImage' })
