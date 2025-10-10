@@ -1156,12 +1156,22 @@ exports.getRefreshTokenServices = async (req, res) => {
  */
 exports.getUserServices = async (req, res) => {
     try {
-        const { limit, pageNo } = req.query;
+        const { limit, pageNo, keyword } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
-        let data = await userSchema.find(
-            { role: { $ne: 'admin' } }
-        ).sort({ createDate: -1 }).skip(offset).limit(limits);
+        let query = { role: { $ne: 'admin' } };
+        if (keyword && keyword.trim()) {
+            query.$or = [
+                { email: { $regex: keyword.trim(), $options: 'i' } },
+                { firstName: { $regex: keyword.trim(), $options: 'i' } },
+                { lastName: { $regex: keyword.trim(), $options: 'i' } },
+                { mobile: { $regex: keyword.trim(), $options: 'i' } }
+            ];
+        }
+        let data = await userSchema.find(query)
+            .sort({ createDate: -1 })
+            .skip(offset)
+            .limit(limits);
         if (data.length > 0) {
             // For each user, find their subscriptions and add as a new param
             // Use map with Promise.all to fetch subscriptions for each user
@@ -1836,7 +1846,7 @@ exports.addPromoCodeServices = async (req) => {
 exports.getPromoCodeServices = async (req, res) => {
     try {
         const { _id } = req.User;
-        const { city_id, keyward, limit, pageNo } = req.query;
+        const { city_id, keyword, limit, pageNo } = req.query;
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
         // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
@@ -1844,10 +1854,10 @@ exports.getPromoCodeServices = async (req, res) => {
         if (city_id) {
             query.city_id = city_id;
         }
-        if (keyward) {
+        if (keyword) {
             query.$or = [
-                { title: { $regex: keyward, $options: 'i' } },
-                { code: { $regex: keyward, $options: 'i' } }
+                { title: { $regex: keyword, $options: 'i' } },
+                { code: { $regex: keyword, $options: 'i' } }
             ];
         }
         let data = await PromoCodeSchema.find(

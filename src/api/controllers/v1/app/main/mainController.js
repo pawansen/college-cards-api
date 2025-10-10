@@ -27,7 +27,8 @@ const {
     getValidateInfoServices,
     cancelMembershipServices,
     contactUsServices,
-    getRestaurantsLogoListServices
+    getRestaurantsLogoListServices,
+    getPackageAllServices
 } = require('../../../../services/mainServices'),
     {
         ErrorResponse,
@@ -289,6 +290,25 @@ exports.getUserFeedbackController = (req, res) => {
  */
 exports.getPackageController = (req, res) => {
     getPackageServices(req)
+        .then((response) => {
+            if (response.status) {
+                SuccessResponse(res, response.message, response.data)
+            } else {
+                ErrorResponse(res, response.message)
+            }
+        })
+        .catch((err) => {
+            ErrorResponse(res, err.message)
+        })
+}
+
+/**
+ * add user.
+ *
+ * @returns {Object}
+ */
+exports.getPackageAllController = (req, res) => {
+    getPackageAllServices(req)
         .then((response) => {
             if (response.status) {
                 SuccessResponse(res, response.message, response.data)

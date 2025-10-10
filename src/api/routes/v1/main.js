@@ -4,13 +4,13 @@ const Validator = require('../../middlewares/validator'),
     {
         loginController, registerController, stateController, citiesController, getProfileController,
         updateUserController, updateCityController, getCouponController, changePasswordController,
-        logoutController, feedbackController, getPackageController, userSubscribeController, getUserSubscribeController,
+        logoutController, feedbackController, getPackageController, getPackageAllController, userSubscribeController, getUserSubscribeController,
         getPaymentHistoryController, getRefreshTokenController, getReferralController, getNotificationController, getUserFeedbackController,
         getVersionController, contactUsController,
         forgotPasswordController, verifyOtpController, deleteAccountController, getContentController, getValidateInfoController,
         cancelMembershipController, getRestaurantsLogoListController
     } = require('../../controllers/v1/app/main/mainController'),
-    { getCountriesController } = require('../../controllers/v1/app/admin/adminController');
+    { getCountriesController, getPromoCodeController } = require('../../controllers/v1/app/admin/adminController');
 
 class MainRoutes {
     constructor(app) {
@@ -110,6 +110,13 @@ class MainRoutes {
             '/v1/get-package',
             verifyToken,
             getPackageController
+        )
+
+        /** apis */
+        this.app.get(
+            '/v1/get-package-all',
+            verifyToken,
+            getPackageAllController
         )
 
         /** apis */
@@ -219,6 +226,14 @@ class MainRoutes {
         this.app.get(
             '/v1/get-cities',
             citiesController
+        )
+
+
+        /** apis */
+        this.app.get(
+            '/v1/admin/get-promo-code',
+            verifyToken,
+            getPromoCodeController
         )
 
     }

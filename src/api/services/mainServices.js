@@ -83,7 +83,7 @@ exports.loginServices = async (req, res) => {
                     // Check if user already has an active subscription
                     const activeSubscription = await UserSubscribeSchema.findOne({
                         user_id: token.user._id,
-                        status: { $in: ['active', 'cancelledUsedFullMonth'] },
+                        status: { $in: ['active', 'cancelledUsedFullMonth', 'free'] },
                         endDate: { $gte: new Date() }
                     });
                     if (activeSubscription) {
@@ -526,10 +526,21 @@ exports.getCouponServices = async (req, res) => {
         const limits = limit ? parseInt(limit) : 10
         const offset = pageNo ? getOffset(parseInt(pageNo), limit) : 0
 
-        const subscribe = await UserSubscribeSchema.findOne({ user_id: _id, status: { $in: ['active', 'cancelledUsedFullMonth'] }, endDate: { $gte: new Date() } });
-        if (!subscribe) {
+        const subscribe = await UserSubscribeSchema.find({ user_id: _id, status: { $in: ['active', 'cancelledUsedFullMonth', 'free'] }, endDate: { $gte: new Date() } });
+        if (subscribe.length === 0) {
             return { status: 0, message: 'User not subscribed or subscription expired.' }
         }
+        let cityIds = [];
+        if (subscribe && subscribe.length > 0) {
+            for (let sub of subscribe) {
+                if (sub.cityCount === 1 && sub.city_ids) {
+                    cityIds.push(...sub.city_ids);
+                }
+            }
+        }
+        cityIds = [...new Set(cityIds)]; // Remove duplicates
+
+
         // Fetch all cities from the database
         const userCities = await userCitiesSchema.find({ user_id: _id });
         // If userCities found, extract city_id into a new array
@@ -539,8 +550,8 @@ exports.getCouponServices = async (req, res) => {
         }
         // Find coupons where city_id is in userCityIds (if available), otherwise use provided city_id
         let query = {};
-        if (userCityIds && userCityIds.length > 0) {
-            query.city_id = { $in: userCityIds };
+        if (cityIds && cityIds.length > 0) {
+            query.city_id = { $in: cityIds };
         } else if (city_id) {
             query.city_id = city_id;
         }
@@ -777,6 +788,42 @@ exports.getPackageServices = async (req, res) => {
  *
  * @returns {Object}
  */
+exports.getPackageAllServices = async (req, res) => {
+    try {
+        const { _id } = req.User;
+        const packages = await packageSchema.find(
+            { isActive: true },
+            { _id: 0, "package_id": "$_id", title: 1, cityCount: 1, amount: 1, packageType: 1, isActive: 1 }
+        );
+        if (packages && packages.length > 0) {
+            const existingUserCities = await userCitiesSchema.countDocuments({ user_id: _id });
+            const packageList = packages.map(pkg => {
+                // If pkg is a Mongoose document, use .toObject() to get plain object
+                const plainPkg = typeof pkg.toObject === 'function' ? pkg.toObject() : pkg;
+                return {
+                    ...plainPkg,
+                    billingAmount: plainPkg.amount * existingUserCities
+                };
+            });
+            return {
+                status: 1,
+                message: 'Successfully listed.',
+                data: packageList,
+            }
+        } else {
+            return { status: 0, message: 'No active package found.' }
+        }
+    } catch (err) {
+        console.log(err)
+        return { status: 0, message: err }
+    }
+}
+
+/**
+ * login.
+ *
+ * @returns {Object}
+ */
 exports.userSubscribeServices = async (req, res) => {
     try {
         const { _id, deviceToken } = req.User;
@@ -879,7 +926,7 @@ exports.userSubscribeServices = async (req, res) => {
             return {
                 status: 1,
                 message: 'Successfully subscribed.',
-                data: existingPackage
+                data: { existingPackage, subscribeInfo }
             }
         } else {
             return { status: 0, message: 'Invalid package ID.' }
@@ -902,13 +949,26 @@ exports.getUserSubscribeServices = async (req, res) => {
         // Check if user already has an active subscription
         const activeSubscriptions = await UserSubscribeSchema.find({
             user_id: _id,
-            status: { $in: ['active', 'cancelledUsedFullMonth'] },
+            status: { $in: ['active', 'cancelledUsedFullMonth', 'free'] },
         });
         if (activeSubscriptions && activeSubscriptions.length > 0) {
             const cityInfo = {};
             // let userCity = await userCitiesSchema.find({ user_id: _id })
             const data = await Promise.all(
                 activeSubscriptions.map(async (sub) => {
+                    if (sub.endDate < new Date() && (sub.status === 'active' || sub.status === 'free' || sub.status === 'cancelledUsedFullMonth')) {
+                        // Update subscription status to 'expired'
+                        await UserSubscribeSchema.updateOne(
+                            { _id: sub._id },
+                            { $set: { status: 'expired' } }
+                        );
+                        sub.status = 'expired'; // Update the status in the current object as well
+                        await UserSubscribeSchema.updateOne(
+                            { _id: sub._id },
+                            { $set: { status: 'expired' } }
+                        );
+                    }
+
                     let cityList = [];
                     if (sub.city_ids && sub.city_ids.length > 0) {
                         cityList = await citiesSchema.find({ id: { $in: sub.city_ids } });
@@ -1418,7 +1478,7 @@ exports.getValidateInfoServices = async (req, res) => {
             // Check if user already has an active subscription
             const activeSubscription = await UserSubscribeSchema.findOne({
                 user_id: user._id,
-                status: { $in: ['active', 'cancelledUsedFullMonth'] },
+                status: { $in: ['active', 'cancelledUsedFullMonth', 'free'] },
                 endDate: { $gte: new Date() }
             });
             if (activeSubscription) {
@@ -1456,7 +1516,17 @@ exports.getValidateInfoServices = async (req, res) => {
 exports.cancelMembershipServices = async (req, res) => {
     try {
         const { _id, deviceToken, email } = req.User;
-        const user = await UserSubscribeSchema.findOne({ user_id: _id, status: "active", endDate: { $gte: new Date() } });
+        const { subscribeId } = req.body;
+        if (!subscribeId) {
+            return { status: 0, message: 'Subscription ID is required.' };
+        }
+        let user;
+        if (subscribeId) {
+            user = await UserSubscribeSchema.findOne({ _id: subscribeId, user_id: _id, status: { $in: ["active", "free"] }, endDate: { $gte: new Date() } });
+        } else {
+            user = await UserSubscribeSchema.findOne({ user_id: _id, status: { $in: ["active", "free"] }, endDate: { $gte: new Date() } });
+        }
+
         if (user) {
             let status = "cancelledUsedFullMonth";
             // Check if the difference between startDate and today is 15 days or more
@@ -1464,11 +1534,8 @@ exports.cancelMembershipServices = async (req, res) => {
             const today = new Date();
             const diffTime = today.getTime() - startDate.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            //if (diffDays >= 15) {
-            //    status = "cancelledUsedFullMonth";
-            //}
             const updateResult = await UserSubscribeSchema.updateOne(
-                { user_id: _id, status: "active", endDate: { $gte: new Date() } },
+                { user_id: _id, status: { $in: ["active", "free"] }, endDate: { $gte: new Date() } },
                 { $set: { status: status, updatedDate: new Date() } } // Set isActive to false and add updatedDate timestamp
             );
             if (updateResult.modifiedCount > 0) {
