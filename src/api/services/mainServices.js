@@ -827,7 +827,7 @@ exports.getPackageAllServices = async (req, res) => {
 exports.userSubscribeServices = async (req, res) => {
     try {
         const { _id, deviceToken } = req.User;
-        const { package_id, promo_code } = req.body;
+        const { package_id, promo_code, city_ids } = req.body;
         const existingPackage = await packageSchema.findOne(
             { _id: package_id },
             { _id: 0, "package_id": "$_id", title: 1, cityCount: 1, amount: 1, packageType: 1, isActive: 1 }
@@ -857,11 +857,22 @@ exports.userSubscribeServices = async (req, res) => {
             //         data: activeSubscription
             //     };
             // }
-            const existingUserCities = await userCitiesSchema.find({ user_id: _id });
-            const cityCount = existingUserCities.length;
-            const userCityIds = existingUserCities.map(item => item.city_id);
+            let cityCount;
+            let userCityIds;
 
-            const billingAmount = existingPackage.amount * cityCount;
+            // If city_ids provided in request, use them; otherwise fall back to existing behavior
+            if (city_ids && Array.isArray(city_ids) && city_ids.length > 0) {
+		// If city_ids provided in request, use them; otherwise fall back to existing behavior
+		userCityIds = city_ids;
+		cityCount = city_ids.length;
+	  }
+	    else{
+		// Fall back to existing behavior: read from userCitiesSchema
+		const existingUserCities = await userCitiesSchema.find({ user_id: _id });
+		cityCount = existingUserCities.length;
+		userCityIds = existingUserCities.map(item => item.city_id);
+	}
+	    const billingAmount = existingPackage.amount * cityCount;
             // Calculate endDate based on packageType
             let endDate = new Date();
             if (existingPackage.packageType === 'yearly') {

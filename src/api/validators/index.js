@@ -276,6 +276,7 @@ const updatePackage = Joi.object({
 const userSubscribe = Joi.object({
   package_id: Joi.string().required(),
   promo_code: Joi.string().allow('').optional(),
+  city_ids: Joi.array().items(Joi.number().integer()).optional(),
   Authorization: Joi.string().allow('').optional(),
 })
 
